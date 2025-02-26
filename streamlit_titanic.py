@@ -13,11 +13,10 @@ import mlflow.sklearn
 
 st.title("Tiền xử lý dữ liệu Titanic cho Multiple Regression")
 
-tab1, tab2, tab3,tab4 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "Xử lý dữ liệu",
     "Huấn luyện",
-    "Dự đoán",
-    "Mlflow"
+    "Dự đoán"
 ])
 
 # --------------------- Tab 1: Xử lý dữ liệu ---------------------
@@ -274,66 +273,66 @@ with tab3:
                         st.subheader(f"Prediction Result: {result} (Input không có trong bộ dữ liệu)")
                 except Exception as e:
                     st.error(f"Lỗi: {str(e)}")
-with tab4:
-    st.header("Tracking MLflow")
-    try:
-        from mlflow.tracking import MlflowClient
-        client = MlflowClient()
+# with tab4:
+#     st.header("Tracking MLflow")
+#     try:
+#         from mlflow.tracking import MlflowClient
+#         client = MlflowClient()
 
-        # Lấy danh sách thí nghiệm từ MLflow
-        experiments = mlflow.search_experiments()
+#         # Lấy danh sách thí nghiệm từ MLflow
+#         experiments = mlflow.search_experiments()
 
-        if experiments:
-            st.write("#### Danh sách thí nghiệm")
-            experiment_data = [
-                {
-                    "Experiment ID": exp.experiment_id,
-                    "Experiment Name": exp.name,
-                    "Artifact Location": exp.artifact_location
-                }
-                for exp in experiments
-            ]
-            df_experiments = pd.DataFrame(experiment_data)
-            st.dataframe(df_experiments)
+#         if experiments:
+#             st.write("#### Danh sách thí nghiệm")
+#             experiment_data = [
+#                 {
+#                     "Experiment ID": exp.experiment_id,
+#                     "Experiment Name": exp.name,
+#                     "Artifact Location": exp.artifact_location
+#                 }
+#                 for exp in experiments
+#             ]
+#             df_experiments = pd.DataFrame(experiment_data)
+#             st.dataframe(df_experiments)
 
-            # Chọn thí nghiệm dựa trên TÊN thay vì ID
-            selected_exp_name = st.selectbox(
-                "🔍 Chọn thí nghiệm để xem chi tiết",
-                options=[exp.name for exp in experiments]
-            )
+#             # Chọn thí nghiệm dựa trên TÊN thay vì ID
+#             selected_exp_name = st.selectbox(
+#                 "🔍 Chọn thí nghiệm để xem chi tiết",
+#                 options=[exp.name for exp in experiments]
+#             )
 
-            # Lấy ID tương ứng với tên được chọn
-            selected_exp_id = next(exp.experiment_id for exp in experiments if exp.name == selected_exp_name)
+#             # Lấy ID tương ứng với tên được chọn
+#             selected_exp_id = next(exp.experiment_id for exp in experiments if exp.name == selected_exp_name)
 
-            # Lấy danh sách runs trong thí nghiệm đã chọn
-            runs = mlflow.search_runs(selected_exp_id)
-            if not runs.empty:
-                st.write("#### Danh sách runs")
-                st.dataframe(runs)
+#             # Lấy danh sách runs trong thí nghiệm đã chọn
+#             runs = mlflow.search_runs(selected_exp_id)
+#             if not runs.empty:
+#                 st.write("#### Danh sách runs")
+#                 st.dataframe(runs)
 
-                # Chọn run để xem chi tiết
-                selected_run_id = st.selectbox(
-                    "🔍 Chọn run để xem chi tiết",
-                    options=runs["run_id"]
-                )
+#                 # Chọn run để xem chi tiết
+#                 selected_run_id = st.selectbox(
+#                     "🔍 Chọn run để xem chi tiết",
+#                     options=runs["run_id"]
+#                 )
 
-                # Hiển thị chi tiết run
-                run = mlflow.get_run(selected_run_id)
-                st.write("##### Thông tin run")
-                st.write(f"*Run ID:* {run.info.run_id}")
-                st.write(f"*Experiment ID:* {run.info.experiment_id}")
-                st.write(f"*Start Time:* {run.info.start_time}")
+#                 # Hiển thị chi tiết run
+#                 run = mlflow.get_run(selected_run_id)
+#                 st.write("##### Thông tin run")
+#                 st.write(f"*Run ID:* {run.info.run_id}")
+#                 st.write(f"*Experiment ID:* {run.info.experiment_id}")
+#                 st.write(f"*Start Time:* {run.info.start_time}")
 
-                # Hiển thị metrics
-                st.write("##### Metrics")
-                st.json(run.data.metrics)
+#                 # Hiển thị metrics
+#                 st.write("##### Metrics")
+#                 st.json(run.data.metrics)
 
-                # Hiển thị params
-                st.write("##### Params")
-                st.json(run.data.params)
-            else:
-                st.warning("Không có runs nào trong thí nghiệm này.")
-        else:
-            st.warning("Không có thí nghiệm nào được tìm thấy.")
-    except Exception as e:
-        st.error(f"Đã xảy ra lỗi khi lấy thông tin từ MLflow: {e}")
+#                 # Hiển thị params
+#                 st.write("##### Params")
+#                 st.json(run.data.params)
+#             else:
+#                 st.warning("Không có runs nào trong thí nghiệm này.")
+#         else:
+#             st.warning("Không có thí nghiệm nào được tìm thấy.")
+#     except Exception as e:
+#         st.error(f"Đã xảy ra lỗi khi lấy thông tin từ MLflow: {e}")
