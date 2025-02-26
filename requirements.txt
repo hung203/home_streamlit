@@ -1,7 +1,9 @@
 streamlit
-pandas
-numpy
-scikit-learn
-matplotlib
 mlflow
-streamlit_drawable_canvas
+scikit-learn
+numpy
+matplotlib
+pandas
+streamlit-drawable-canvas
+Pillow
+opencv-python
