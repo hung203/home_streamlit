@@ -6,4 +6,4 @@ matplotlib
 pandas
 streamlit-drawable-canvas
 Pillow
-opencv-python
+opencv-python-headless
