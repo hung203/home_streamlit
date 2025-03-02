@@ -13,10 +13,11 @@ import mlflow.sklearn
 
 st.title("Tiền xử lý dữ liệu Titanic cho Multiple Regression")
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3,tab4 = st.tabs([
     "Xử lý dữ liệu",
     "Huấn luyện",
-    "Dự đoán"
+    "Dự đoán",
+    "Mlflow"
 ])
 
 # --------------------- Tab 1: Xử lý dữ liệu ---------------------
@@ -99,7 +100,17 @@ with tab1:
         st.write(st.session_state.df)
 
     st.header("4. Xóa các cột không cần thiết")
-    selected_cols_to_drop = st.multiselect("Chọn các cột muốn xóa:", options=df.columns.tolist())
+
+    # Các cột mặc định sẽ được chọn
+    default_cols_to_drop = ["PassengerId", "Name", "Ticket", "Cabin"]
+
+    # Tạo danh sách chọn với giá trị mặc định
+    selected_cols_to_drop = st.multiselect(
+        "Chọn các cột muốn xóa:", 
+        options=df.columns.tolist(), 
+        default=[col for col in default_cols_to_drop if col in df.columns]
+    )
+
     if st.button("Xóa các cột đã chọn"):
         if selected_cols_to_drop:
             df.drop(selected_cols_to_drop, axis=1, inplace=True)
@@ -107,9 +118,11 @@ with tab1:
             st.success("Đã xóa các cột: " + ", ".join(selected_cols_to_drop))
         else:
             st.info("Không có cột nào được chọn.")
+
     st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
     st.write(st.session_state.df)
     df = st.session_state.df  # đảm bảo df được cập nhật
+
 
     st.header("5. Chuẩn hóa dữ liệu")
     if st.button("Chuẩn hóa dữ liệu"):
@@ -169,46 +182,85 @@ with tab2:
         
         st.markdown("### Tùy chọn thông số của mô hình")
         if algorithm == "Multiple Regression":
-            fit_intercept = st.checkbox("Fit Intercept", value=True)
-            model = LinearRegression(fit_intercept=fit_intercept)
+            model = LinearRegression(fit_intercept=True)  # Luôn bật Intercept
         else:
             degree = st.number_input("Chọn bậc của đa thức:", min_value=2, max_value=5, value=2)
-            interaction_only = st.checkbox("Chỉ sử dụng các tương tác", value=False)
-            include_bias = st.checkbox("Bao gồm bias", value=True)
-            fit_intercept = st.checkbox("Fit Intercept cho Linear Regression", value=True)
-            poly_features = PolynomialFeatures(degree=degree, interaction_only=interaction_only, include_bias=include_bias)
-            linear_model = LinearRegression(fit_intercept=fit_intercept)
+
+            # Bias luôn True
+            poly_features = PolynomialFeatures(degree=degree, include_bias=True)
+            linear_model = LinearRegression(fit_intercept=True)
             model = Pipeline([
                 ('poly', poly_features),
                 ('linear', linear_model)
             ])
-        
-        ex = mlflow.set_experiment(experiment_name='experiment2')
-        with mlflow.start_run(experiment_id=ex.experiment_id) as run:
-            cv = KFold(n_splits=5, shuffle=True, random_state=42)
-            try:
-                scores = cross_val_score(model, st.session_state.X_train, st.session_state.y_train, 
-                                          cv=cv, scoring='r2', error_score='raise')
-                st.write("Điểm Cross Validation (R2):", scores)
-                mlflow.log_metric("cv_r2_mean", scores.mean())
-            except Exception as e:
-                st.error("Lỗi khi chạy cross-validation")
-            
-            try:
-                model.fit(st.session_state.X_train, st.session_state.y_train)
-                y_pred = model.predict(st.session_state.X_test)
-                r2 = r2_score(st.session_state.y_test, y_pred)
-                mse = mean_squared_error(st.session_state.y_test, y_pred)
-                st.write("R-squared:", r2)
-                st.write("Mean Squared Error (MSE):", mse)
-                mlflow.log_metric("test_r2_score", r2)
-                mlflow.log_metric("test_MSE", mse)
-            except Exception as e:
-                st.error("Lỗi khi huấn luyện mô hình hoặc dự đoán: " + str(e))
-            
-            st.session_state.trained_model = model
+
+        # Nút bấm để huấn luyện mô hình
+        if st.button("Huấn luyện mô hình"):
+            # Tạo tên thí nghiệm tự động dựa trên tên mô hình và thời gian hiện tại
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            experiment_name = f"Experiment_{algorithm}_{timestamp}"
+            # Thiết lập tên thí nghiệm cho mlflow (nếu thí nghiệm chưa tồn tại, mlflow sẽ tạo mới)
+            mlflow.set_experiment(experiment_name)
+             # Lưu tên thí nghiệm vào session_state và hiển thị ra giao diện
+            st.session_state.experiment_name = experiment_name
+            st.write("Tên thí nghiệm:", experiment_name)
+            with mlflow.start_run() as run:
+                cv = KFold(n_splits=5, shuffle=True, random_state=42)
+                try:
+                    scores = cross_val_score(model, st.session_state.X_train, st.session_state.y_train, 
+                                            cv=cv, scoring='r2', error_score='raise')
+                    
+                    # Hiển thị Cross Validation Scores
+                    cv_results_df = pd.DataFrame({
+                        "Fold": [f"Fold {i+1}" for i in range(len(scores))],
+                        "R² Score": scores
+                    })
+                    st.markdown("### Kết quả Cross Validation (R²)")
+                    st.write(cv_results_df)
+                    st.write("**R² trung bình:**", scores.mean())
+
+                    mlflow.log_metric("cv_r2_mean", scores.mean())
+                except Exception as e:
+                    st.error("Lỗi khi chạy cross-validation: " + str(e))
+                
+                try:
+                    model.fit(st.session_state.X_train, st.session_state.y_train)
+                    y_pred = model.predict(st.session_state.X_test)
+                    r2 = r2_score(st.session_state.y_test, y_pred)
+                    mse = mean_squared_error(st.session_state.y_test, y_pred)
+                    st.write("R-squared trên tập kiểm thử:", r2)
+                    st.write("Mean Squared Error (MSE):", mse)
+                    mlflow.log_metric("test_r2_score", r2)
+                    mlflow.log_metric("test_MSE", mse)
+
+                    # Hiển thị tham số của mô hình
+                    st.markdown("### Tham số của mô hình")
+                    if algorithm == "Multiple Regression":
+                        coef_df = pd.DataFrame({
+                            "Feature": st.session_state.X_train.columns,
+                            "Coefficient": model.coef_
+                        })
+                        st.write(coef_df)
+                        st.write("Hệ số chặn (Intercept):", model.intercept_)  # Vẫn hiển thị Intercept
+                    else:
+                        feature_names = poly_features.get_feature_names_out(st.session_state.X_train.columns)
+                        coef_df = pd.DataFrame({
+                            "Feature": feature_names,
+                            "Coefficient": model.named_steps['linear'].coef_
+                        })
+                        st.write(coef_df)
+                        st.write("Hệ số chặn của mô hình tuyến tính:", model.named_steps['linear'].intercept_)
+
+                    st.session_state.trained_model = model
+                except Exception as e:
+                    st.error("Lỗi khi huấn luyện mô hình hoặc dự đoán: " + str(e))
+
     else:
         st.info("Chưa có dữ liệu được chia, vui lòng thực hiện bước chia dữ liệu.")
+
+
+
 
 # --------------------- Tab 3: Dự đoán ---------------------
 with tab3:
@@ -273,66 +325,73 @@ with tab3:
                         st.subheader(f"Prediction Result: {result} (Input không có trong bộ dữ liệu)")
                 except Exception as e:
                     st.error(f"Lỗi: {str(e)}")
-# with tab4:
-#     st.header("Tracking MLflow")
-#     try:
-#         from mlflow.tracking import MlflowClient
-#         client = MlflowClient()
+with tab4:
+    st.header("5. Tracking MLflow")
+    try:
+        from mlflow.tracking import MlflowClient
+        client = MlflowClient()
 
-#         # Lấy danh sách thí nghiệm từ MLflow
-#         experiments = mlflow.search_experiments()
+        # Lấy danh sách thí nghiệm từ MLflow
+        experiments = mlflow.search_experiments()
 
-#         if experiments:
-#             st.write("#### Danh sách thí nghiệm")
-#             experiment_data = [
-#                 {
-#                     "Experiment ID": exp.experiment_id,
-#                     "Experiment Name": exp.name,
-#                     "Artifact Location": exp.artifact_location
-#                 }
-#                 for exp in experiments
-#             ]
-#             df_experiments = pd.DataFrame(experiment_data)
-#             st.dataframe(df_experiments)
+        if experiments:
+            st.write("#### Danh sách thí nghiệm")
+            experiment_data = [
+                {
+                    "Experiment ID": exp.experiment_id,
+                    "Experiment Name": exp.name,
+                    "Artifact Location": exp.artifact_location
+                }
+                for exp in experiments
+            ]
+            df_experiments = pd.DataFrame(experiment_data)
+            st.dataframe(df_experiments)
 
-#             # Chọn thí nghiệm dựa trên TÊN thay vì ID
-#             selected_exp_name = st.selectbox(
-#                 "🔍 Chọn thí nghiệm để xem chi tiết",
-#                 options=[exp.name for exp in experiments]
-#             )
+            # Chọn thí nghiệm dựa trên TÊN thay vì ID
+            selected_exp_name = st.selectbox(
+                "🔍 Chọn thí nghiệm để xem chi tiết",
+                options=[exp.name for exp in experiments]
+            )
 
-#             # Lấy ID tương ứng với tên được chọn
-#             selected_exp_id = next(exp.experiment_id for exp in experiments if exp.name == selected_exp_name)
+            # Lấy ID tương ứng với tên được chọn
+            selected_exp_id = next(exp.experiment_id for exp in experiments if exp.name == selected_exp_name)
 
-#             # Lấy danh sách runs trong thí nghiệm đã chọn
-#             runs = mlflow.search_runs(selected_exp_id)
-#             if not runs.empty:
-#                 st.write("#### Danh sách runs")
-#                 st.dataframe(runs)
+            # Lấy danh sách runs trong thí nghiệm đã chọn
+            runs = mlflow.search_runs(selected_exp_id)
+            if not runs.empty:
+                st.write("#### Danh sách runs")
+                st.dataframe(runs)
 
-#                 # Chọn run để xem chi tiết
-#                 selected_run_id = st.selectbox(
-#                     "🔍 Chọn run để xem chi tiết",
-#                     options=runs["run_id"]
-#                 )
+                # Chọn run để xem chi tiết
+                selected_run_id = st.selectbox(
+                    "🔍 Chọn run để xem chi tiết",
+                    options=runs["run_id"]
+                )
 
-#                 # Hiển thị chi tiết run
-#                 run = mlflow.get_run(selected_run_id)
-#                 st.write("##### Thông tin run")
-#                 st.write(f"*Run ID:* {run.info.run_id}")
-#                 st.write(f"*Experiment ID:* {run.info.experiment_id}")
-#                 st.write(f"*Start Time:* {run.info.start_time}")
+                # Hiển thị chi tiết run
+                run = mlflow.get_run(selected_run_id)
+                st.write("##### Thông tin run")
+                st.write(f"*Run ID:* {run.info.run_id}")
+                st.write(f"*Experiment ID:* {run.info.experiment_id}")
+                st.write(f"*Start Time:* {run.info.start_time}")
 
-#                 # Hiển thị metrics
-#                 st.write("##### Metrics")
-#                 st.json(run.data.metrics)
+                # Hiển thị metrics
+                st.write("##### Metrics")
+                st.json(run.data.metrics)
 
-#                 # Hiển thị params
-#                 st.write("##### Params")
-#                 st.json(run.data.params)
-#             else:
-#                 st.warning("Không có runs nào trong thí nghiệm này.")
-#         else:
-#             st.warning("Không có thí nghiệm nào được tìm thấy.")
-#     except Exception as e:
-#         st.error(f"Đã xảy ra lỗi khi lấy thông tin từ MLflow: {e}")
+                # Hiển thị params
+                st.write("##### Params")
+                st.json(run.data.params)
+
+                # Hiển thị artifacts sử dụng client.list_artifacts
+                artifacts = client.list_artifacts(selected_run_id)
+                if artifacts:
+                    st.write("##### Artifacts")
+                    for artifact in artifacts:
+                        st.write(f"- {artifact.path}")
+            else:
+                st.warning("Không có runs nào trong thí nghiệm này.")
+        else:
+            st.warning("Không có thí nghiệm nào được tìm thấy.")
+    except Exception as e:
+        st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
