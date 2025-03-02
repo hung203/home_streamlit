@@ -360,8 +360,8 @@ with tab4:
                 st.write("##### Params")
                 st.json(run.data.params)
 
-                # Hiển thị artifacts
-                artifacts = mlflow.list_artifacts(selected_run_id)
+                # Hiển thị artifacts sử dụng client.list_artifacts
+                artifacts = client.list_artifacts(selected_run_id)
                 if artifacts:
                     st.write("##### Artifacts")
                     for artifact in artifacts:
