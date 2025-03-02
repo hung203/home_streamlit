@@ -120,8 +120,6 @@ with tab1:
 with tab2:
     st.header("3. Huấn luyện và đánh giá mô hình")
 
-    # exp_name = st.text_input("Nhập tên thí nghiệm", "MNIST_Classification")
-
     # Chọn mô hình
     model_choice = st.selectbox("Chọn mô hình", ["Decision Tree", "SVM"], key="model_choice")
     
@@ -152,8 +150,18 @@ with tab2:
         y_train_used = st.session_state.y_train
         X_valid = st.session_state.X_valid
         y_valid = st.session_state.y_valid
+
+        # Tạo tên thí nghiệm tự động dựa trên tên mô hình và thời gian hiện tại
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        experiment_name = f"Experiment_{model_choice}_{timestamp}"
+        # Thiết lập tên thí nghiệm cho mlflow (nếu thí nghiệm chưa tồn tại, mlflow sẽ tạo mới)
+        mlflow.set_experiment(experiment_name)
         
         with mlflow.start_run():
+            # Log tên thí nghiệm dưới dạng tham số
+            mlflow.log_param("experiment_name", experiment_name)
+            
             if model_choice == "Decision Tree":
                 model = DecisionTreeClassifier(
                     max_depth=max_depth, 
@@ -164,7 +172,7 @@ with tab2:
                 mlflow.log_param("max_depth", max_depth)
                 mlflow.log_param("min_samples_split", min_samples_split)
                 mlflow.log_param("min_samples_leaf", min_samples_leaf)
-
+    
             else:  # SVM
                 scaler = StandardScaler()
                 X_train_used_scaled = scaler.fit_transform(X_train_used)
@@ -179,7 +187,7 @@ with tab2:
                 else:
                     model_params["gamma"] = gamma
                     mlflow.log_param("gamma", gamma)
-
+    
                 if kernel == "poly":
                     model_params["degree"] = degree
                     mlflow.log_param("degree", degree)
@@ -187,12 +195,12 @@ with tab2:
                 model = SVC(**model_params)
                 
                 X_train_used, X_valid = X_train_used_scaled, X_valid_scaled
-
+    
             # Huấn luyện mô hình
             model.fit(X_train_used, y_train_used)
             y_pred = model.predict(X_valid)
-
-            # Lưu vào session_state
+    
+            # Lưu các kết quả và mô hình vào session_state
             st.session_state.model = model
             st.session_state.trained_model_name = model_choice
             st.session_state.train_accuracy = accuracy_score(y_valid, y_pred)
@@ -201,14 +209,17 @@ with tab2:
             mlflow.log_param("model", model_choice)
             mlflow.log_metric("accuracy", st.session_state.train_accuracy)
             mlflow.sklearn.log_model(model, "model")
-
+    
+        # Lưu tên thí nghiệm vào session_state và hiển thị ra giao diện
+        st.session_state.experiment_name = experiment_name
+        st.write("Tên thí nghiệm:", experiment_name)
+    
     # Hiển thị kết quả sau khi huấn luyện
     if "train_accuracy" in st.session_state:
         st.write(f"🔹 **Độ chính xác trên tập validation:** {st.session_state.train_accuracy:.4f}")
     if "train_report" in st.session_state:
         st.text("Báo cáo phân loại:")
         st.text(st.session_state.train_report)
-
 
 
 # ------------------------
@@ -290,7 +301,6 @@ with tab3:
 
                 st.write(f"🎯 **Dự đoán: {prediction}**")
                 st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
-
 
 with tab4:
     st.header("5. Tracking MLflow")
