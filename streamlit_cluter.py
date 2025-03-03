@@ -43,27 +43,39 @@ with tab1:
     - K-Means là thuật toán phân cụm phổ biến, chia dữ liệu thành K nhóm dựa trên khoảng cách đến trọng tâm (centroid).
     - Quy trình:
         1. Chọn K cụm ban đầu.
-        2. Gán mỗi điểm dữ liệu vào cụm gần nhất.
-        3. Tính lại trọng tâm cho từng cụm.
-        4. Lặp lại cho đến khi các trọng tâm ổn định.
+        2. Gán mỗi điểm dữ liệu vào cụm gần nhất.""")
+        
+    st.image("image/Screenshot 2025-03-03 083928.png")     
+    st.write("""3. Tính lại trọng tâm cho từng cụm.""")
+
+    st.image("image/Screenshot 2025-03-03 084527.png")
+    st.write("""4. Lặp lại cho đến khi các trọng tâm ổn định.
     """)
     
     st.markdown("### 🔹 DBSCAN")
     st.write("""
-    - DBSCAN (Density-Based Spatial Clustering of Applications with Noise) là thuật toán phân cụm dựa trên mật độ.
-    - Ưu điểm:
-        - Không cần xác định số cụm trước (không giống K-Means).
-        - Tốt trong việc phát hiện nhiễu.
-    - Nhược điểm:
-        - Nhạy cảm với tham số `eps`(Epsilon - Bán kính lân cận) và `min_samples`(Số lượng điểm tối thiểu).
-    """)
+    - **DBSCAN** (Density-Based Spatial Clustering of Applications with Noise) là thuật toán phân cụm dựa trên mật độ.
 
+    ##### Quy trình của thuật toán:
+    1. Thuật toán lựa chọn một điểm dữ liệu bất kỳ. Sau đó tiến hành xác định các điểm lõi và điểm biên thông qua vùng lân cận epsilon bằng cách lan truyền theo liên kết chuỗi các điểm thuộc cùng một cụm.  
+    2. Cụm hoàn toàn được xác định khi không thể mở rộng được thêm. Khi đó lặp lại đệ quy toàn bộ quá trình với điểm khởi tạo trong số các điểm dữ liệu còn lại để xác định một cụm mới.
+
+    ### Ưu điểm:
+    - Không cần xác định số cụm trước (không giống K-Means).  
+    - Tốt trong việc phát hiện nhiễu.  
+
+    ### Nhược điểm:
+    - Nhạy cảm với tham số `eps` (Epsilon - Bán kính lân cận) và `min_samples` (Số lượng điểm tối thiểu).
+    """)
     st.subheader("3️⃣ Đánh giá chất lượng phân cụm")
     st.write("Sau khi phân cụm, có nhiều cách đánh giá kết quả:")
     
     st.markdown("- **Silhouette Score**: Đo lường mức độ tách biệt giữa các cụm.")
+    st.image("image/Screenshot 2025-03-03 084601.png")
     st.markdown("- **Adjusted Rand Index (ARI)**: So sánh phân cụm với nhãn thực tế (nếu có).")
+    st.image("image\Screenshot 2025-03-03 084611.png")
     st.markdown("- **Davies-Bouldin Index**: Đánh giá sự tương đồng giữa các cụm.")
+    st.image("image\Screenshot 2025-03-03 084626.png")
 
 with tab2:
     st.header("1. Xử lý dữ liệu")
