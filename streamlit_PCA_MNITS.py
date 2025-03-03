@@ -60,33 +60,45 @@ tab1, tab2, tab3 = st.tabs(["Lý thuyết về giảm chiều dữ liệu", "Th�
 # ----------- Tab 1: Lý thuyết về giảm chiều dữ liệu -----------
 with tab1:
     st.header("Lý thuyết về giảm chiều dữ liệu")
-    st.markdown("""
+    st.markdown(r"""
     ### Giới thiệu về giảm chiều dữ liệu 🚀
     **Giảm chiều dữ liệu** là quá trình chuyển đổi dữ liệu từ không gian có số chiều cao (với nhiều đặc trưng) sang không gian có số chiều thấp hơn mà vẫn giữ lại được những đặc trưng quan trọng nhất. Quá trình này giúp:
     - **Trực quan hóa dữ liệu 📊:** Hiển thị dữ liệu trong không gian 2D hoặc 3D, từ đó dễ dàng nhận biết cấu trúc, nhóm (clusters) hay các mối liên hệ giữa các mẫu.
     - **Giảm nhiễu và tăng tốc độ tính toán ⚡:** Loại bỏ những đặc trưng dư thừa, không cần thiết giúp mô hình học máy chạy nhanh hơn và tránh tình trạng quá khớp (overfitting).
-    
+
     ### Các phương pháp giảm chiều dữ liệu phổ biến 🔍
+
     #### 1. PCA (Principal Component Analysis) 💡
     - **Nguyên lý:**  
-      PCA tìm các thành phần chính (principal components) sao cho phần lớn phương sai của dữ liệu được giữ lại. Nó sử dụng biến đổi tuyến tính để chuyển đổi dữ liệu sang không gian mới với các thành phần độc lập.
-    - **Ưu điểm:**  
-      - Đơn giản, hiệu quả và dễ hiểu.
-      - Giảm được số chiều mà vẫn giữ lại phần lớn thông tin quan trọng.
-    - **Nhược điểm:**  
-      - Là một phương pháp tuyến tính, không thể bắt được những quan hệ phi tuyến giữa các đặc trưng.
-      - Đôi khi khó diễn giải ý nghĩa của các thành phần chính khi số chiều gốc quá lớn.
+      PCA tìm các thành phần chính sao cho phần lớn phương sai của dữ liệu được giữ lại. Giả sử dữ liệu đã được trung bình hóa, ta có:
       
+      - **Ma trận hiệp phương sai:**
+      $$ \Sigma = \frac{1}{n-1} X^T X $$
+      
+      - **Phân tích giá trị riêng:**
+      $$ \Sigma v = \lambda v $$
+      
+      - **Chiếu dữ liệu lên không gian các thành phần chính:**
+      $$ Z = XW $$
+      
+      Trong đó, **W** là ma trận chứa các vector riêng (eigenvectors) tương ứng với các giá trị riêng (eigenvalues) lớn nhất.
+
     #### 2. t-SNE (t-distributed Stochastic Neighbor Embedding) 🔥
     - **Nguyên lý:**  
-      t-SNE trực quan hóa dữ liệu bằng cách chuyển đổi khoảng cách giữa các điểm trong không gian cao chiều thành xác suất, sau đó tái tạo lại các mối quan hệ này trong không gian 2D hoặc 3D. Phương pháp này giúp phát hiện các nhóm nhỏ (clusters) trong dữ liệu phi tuyến.
-    - **Ưu điểm:**  
-      - Rất hiệu quả trong việc trực quan hóa các tập dữ liệu phức tạp như hình ảnh, văn bản.
-      - Giúp phát hiện các cấu trúc ẩn, nhóm (clusters) trong dữ liệu.
-    - **Nhược điểm:**  
-      - Tốc độ tính toán chậm khi xử lý số lượng mẫu lớn.
-      - Kết quả có thể thay đổi mạnh tùy thuộc vào các tham số như perplexity và learning rate.
-    
+      t-SNE trực quan hóa dữ liệu bằng cách chuyển đổi khoảng cách giữa các điểm trong không gian cao chiều thành xác suất, sau đó tái hiện các mối quan hệ này trong không gian 2D hoặc 3D:
+      
+      - **Xác suất khoảng cách trong không gian cao chiều:**
+      $$ p_{j|i} = \frac{\exp(-\|x_i - x_j\|^2 / 2\sigma_i^2)}{\sum_{k \neq i}\exp(-\|x_i - x_k\|^2 / 2\sigma_i^2)} $$
+      
+      - **Xác suất đối xứng:**
+      $$ p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n} $$
+      
+      - **Trong không gian thấp chiều, sử dụng phân phối Student’s t:**
+      $$ q_{ij} = \frac{(1+\|y_i-y_j\|^2)^{-1}}{\sum_{k \neq l}(1+\|y_k-y_l\|^2)^{-1}} $$
+      
+      - **Hàm mất mát Kullback-Leibler cần tối thiểu hóa:**
+      $$ KL(P\|Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}} $$
+      
     ### Ứng dụng của giảm chiều dữ liệu 💼
     - **Trực quan hóa dữ liệu:**  
       Giúp các nhà khoa học dữ liệu và kỹ sư hiểu được cấu trúc nội tại của dữ liệu, nhận diện các mẫu bất thường và phân nhóm dữ liệu.
