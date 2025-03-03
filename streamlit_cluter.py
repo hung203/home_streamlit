@@ -73,9 +73,9 @@ with tab1:
     st.markdown("- **Silhouette Score**: Đo lường mức độ tách biệt giữa các cụm.")
     st.image("image/Screenshot 2025-03-03 084601.png")
     st.markdown("- **Adjusted Rand Index (ARI)**: So sánh phân cụm với nhãn thực tế (nếu có).")
-    st.image("image\Screenshot 2025-03-03 084611.png")
+    st.image("image/Screenshot 2025-03-03 084611.png")
     st.markdown("- **Davies-Bouldin Index**: Đánh giá sự tương đồng giữa các cụm.")
-    st.image("image\Screenshot 2025-03-03 084626.png")
+    st.image("image/Screenshot 2025-03-03 084626.png")
 
 with tab2:
     st.header("1. Xử lý dữ liệu")
