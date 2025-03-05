@@ -121,24 +121,71 @@ with tab2:
     st.header("3. Huấn luyện và đánh giá mô hình")
 
     # Chọn mô hình
-    model_choice = st.selectbox("Chọn mô hình", ["Decision Tree", "SVM"], key="model_choice")
+    model_choice = st.selectbox(
+        "Chọn mô hình", 
+        ["Decision Tree", "SVM"], 
+        key="model_choice",
+        help="Chọn loại mô hình máy học để huấn luyện: Decision Tree (Cây quyết định) hoặc SVM (Máy vector hỗ trợ)."
+    )
     
     if model_choice == "Decision Tree":
-        max_depth = st.slider("Chọn độ sâu tối đa của cây quyết định", 1, 50, 20)
-        min_samples_split = st.slider("Số mẫu tối thiểu để chia một node", 2, 20, 2)
-        min_samples_leaf = st.slider("Số mẫu tối thiểu trong một lá", 1, 10, 1)
+        max_depth = st.slider(
+            "Chọn độ sâu tối đa của cây quyết định", 
+            1, 50, 20,
+            help="Độ sâu tối đa của cây quyết định. Giá trị lớn hơn có thể dẫn đến overfitting, giá trị nhỏ hơn giúp đơn giản hóa mô hình."
+        )
+        min_samples_split = st.slider(
+            "Số mẫu tối thiểu để chia một node", 
+            2, 20, 2,
+            help="Số lượng mẫu tối thiểu cần có trong một node để thực hiện chia nhánh. Giá trị lớn hơn giúp tránh chia nhỏ quá mức."
+        )
+        min_samples_leaf = st.slider(
+            "Số mẫu tối thiểu trong một lá", 
+            1, 10, 1,
+            help="Số lượng mẫu tối thiểu trong mỗi node lá. Giá trị lớn hơn giúp mô hình tổng quát hơn."
+        )
+        # Thêm tiêu chí (criterion) để người dùng chọn
+        criterion = st.selectbox(
+            "Chọn tiêu chí phân chia", 
+            ["gini", "entropy", "log_loss"], 
+            index=0,
+            help="Tiêu chí để đo lường chất lượng chia nhánh: 'gini' (Gini impurity), 'entropy' (Information gain), 'log_loss' (Cross-entropy)."
+        )
     
     elif model_choice == "SVM":
-        kernel = st.selectbox("Chọn kernel", ["linear", "poly", "rbf", "sigmoid"], index=2)
+        kernel = st.selectbox(
+            "Chọn kernel", 
+            ["linear", "poly", "rbf", "sigmoid"], 
+            index=2,
+            help="Loại kernel cho SVM: 'linear' (tuyến tính), 'poly' (đa thức), 'rbf' (hàm Gaussian), 'sigmoid' (hàm sigmoid)."
+        )
         
         if kernel == "linear":
-            C = st.number_input("Chọn giá trị C", min_value=0.01, max_value=100.0, value=10.0, step=0.1)
+            C = st.number_input(
+                "Chọn giá trị C", 
+                min_value=0.01, 
+                max_value=100.0, 
+                value=10.0, 
+                step=0.1,
+                help="Tham số điều chỉnh mức độ phạt lỗi phân loại. Giá trị lớn hơn tăng trọng số cho việc phân loại đúng, có thể dẫn đến overfitting."
+            )
             gamma = None  # Không sử dụng gamma với kernel linear
         else:
-            gamma = st.number_input("Chọn giá trị gamma", min_value=0.0001, max_value=1.0, value=0.01, step=0.0001)
+            gamma = st.number_input(
+                "Chọn giá trị gamma", 
+                min_value=0.0001, 
+                max_value=1.0, 
+                value=0.01, 
+                step=0.0001,
+                help="Tham số quyết định phạm vi ảnh hưởng của một mẫu dữ liệu. Giá trị nhỏ hơn làm tăng phạm vi, giá trị lớn hơn làm giảm phạm vi."
+            )
             C = None  # Không sử dụng C với kernel rbf, poly, sigmoid
         
-        degree = st.slider("Bậc của kernel (chỉ dùng cho poly)", 2, 5, 3) if kernel == "poly" else None
+        degree = st.slider(
+            "Bậc của kernel (chỉ dùng cho poly)", 
+            2, 5, 3,
+            help="Bậc của hàm đa thức (chỉ áp dụng cho kernel 'poly'). Giá trị cao hơn tạo ra các đặc trưng phức tạp hơn."
+        ) if kernel == "poly" else None
     
     # Nút huấn luyện
     if st.button("Huấn luyện mô hình"):
@@ -167,12 +214,13 @@ with tab2:
                     max_depth=max_depth, 
                     min_samples_split=min_samples_split, 
                     min_samples_leaf=min_samples_leaf, 
-                    random_state=42
+                    random_state=42,
+                    criterion=criterion,
                 )
                 mlflow.log_param("max_depth", max_depth)
                 mlflow.log_param("min_samples_split", min_samples_split)
                 mlflow.log_param("min_samples_leaf", min_samples_leaf)
-    
+                mlflow.log_param("criterion", criterion)
             else:  # SVM
                 scaler = StandardScaler()
                 X_train_used_scaled = scaler.fit_transform(X_train_used)
@@ -220,8 +268,6 @@ with tab2:
     if "train_report" in st.session_state:
         st.text("Báo cáo phân loại:")
         st.text(st.session_state.train_report)
-
-
 # ------------------------
 # Bước 4: Demo dự đoán
 # ------------------------
