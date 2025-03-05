@@ -117,9 +117,56 @@ with tab1:
     """)
 
 # ----------- Tab 2: Thực hiện giảm chiều -----------
+import streamlit as st
+import plotly.express as px
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
+import datetime
+import mlflow
+import pandas as pd
+
+# Hàm vẽ biểu đồ 2D (Matplotlib)
+def ve_bieu_do(X, y, title):
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(10, 8))
+    plt.scatter(X[:, 0], X[:, 1], c=y, cmap='viridis', s=10)
+    plt.colorbar()
+    plt.title(title)
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    return fig
+
+# Hàm vẽ biểu đồ 3D tương tác (Plotly)
+def ve_bieu_do_3d(X, y, title):
+    df = pd.DataFrame({
+        'X': X[:, 0],
+        'Y': X[:, 1],
+        'Z': X[:, 2],
+        'Label': y
+    })
+    fig = px.scatter_3d(
+        df, 
+        x='X', 
+        y='Y', 
+        z='Z', 
+        color='Label', 
+        title=title,
+        color_continuous_scale='Viridis',
+        opacity=0.7,
+        height=600
+    )
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='X',
+            yaxis_title='Y',
+            zaxis_title='Z'
+        )
+    )
+    return fig
+
 with tab2:
     st.title("Trực quan hóa PCA & t-SNE trên MNIST")
-    # Nếu dữ liệu chưa được tải, hiển thị giao diện tải dữ liệu
     if not st.session_state.mnist_loaded:
         tai_du_lieu_MNIST()
     
@@ -128,82 +175,108 @@ with tab2:
         y = st.session_state.y
         st.write("Dữ liệu đã được tải thành công!")
     
-        # Cho người dùng lựa chọn thuật toán
         option = st.radio(
             "Chọn thuật toán cần chạy:",
             ("PCA", "t-SNE"),
             help="Chọn PCA để thu gọn dữ liệu hoặc t-SNE để trực quan hóa không gian dữ liệu."
         )
         
-        # Chuẩn hóa dữ liệu
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
-        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        experiment_name = f"Experiment_{option}_{timestamp}"
-        mlflow.set_experiment(experiment_name)
-        st.session_state.experiment_name = experiment_name
-        st.write("Tên thí nghiệm:", experiment_name)
         
         if option == "PCA":
             st.subheader("Cấu hình PCA")
             n_components = st.slider(
                 "Chọn số thành phần (n_components)",
-                2, 100, 50,
-                help="Số thành phần chính cần giữ lại sau khi thực hiện PCA."
+                2, 50, 2,
+                help="Số thành phần chính cần giữ lại. Nếu > 3, hiển thị tỷ lệ phương sai thay vì hình ảnh."
             )
             
             if st.button("Chạy PCA", key="btn_pca"):
-                X_pca = PCA(n_components=n_components).fit_transform(X_scaled)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+                experiment_name = f"Experiment_PCA_{timestamp}"
+                mlflow.set_experiment(experiment_name)
+                st.session_state.experiment_name = experiment_name
+                st.write("Tên thí nghiệm:", experiment_name)
+                
+                pca = PCA(n_components=n_components)
+                X_pca = pca.fit_transform(X_scaled)
                 st.session_state.X_pca = X_pca
                 st.success("PCA đã được tính!")
-                st.subheader("Kết quả PCA")
-                fig_pca = ve_bieu_do(X_pca[:, :2], y, "Trực quan hóa PCA")
-                st.pyplot(fig_pca)
                 
-                # Logging với MLflow
+                st.subheader("Kết quả PCA")
+                if n_components == 2:
+                    fig_pca = ve_bieu_do(X_pca[:, :2], y, "Trực quan hóa PCA 2D")
+                    st.pyplot(fig_pca)
+                elif n_components == 3:
+                    fig_pca = ve_bieu_do_3d(X_pca, y, "Trực quan hóa PCA 3D")
+                    st.plotly_chart(fig_pca, use_container_width=True)
+                else:
+                    explained_variance_ratio = pca.explained_variance_ratio_
+                    total_variance = sum(explained_variance_ratio)
+                    st.write("**Tỷ lệ phương sai giải thích cho từng chiều:**", explained_variance_ratio)
+                    st.write("**Tổng tỷ lệ phương sai giữ lại:**", total_variance)
+                
                 with mlflow.start_run():
                     mlflow.log_param("n_components", n_components)
-                    fig_pca.savefig("pca_visualization.png")
-                    mlflow.log_artifact("pca_visualization.png")
+                    if n_components == 2:
+                        fig_pca.savefig("pca_visualization.png")
+                        mlflow.log_artifact("pca_visualization.png")
+                    elif n_components == 3:
+                        fig_pca.write_image("pca_visualization.png")
+                        mlflow.log_artifact("pca_visualization.png")
+                    else:
+                        mlflow.log_metric("total_explained_variance", total_variance)
                 st.success("Kết quả PCA đã được lưu với MLflow!")
         
         elif option == "t-SNE":
             st.subheader("Cấu hình t-SNE")
-            perplexity = st.slider(
-                "Chọn giá trị perplexity",
-                5, 50, 30,
-                help="Số lượng láng giềng được cân nhắc khi tính khoảng cách giữa các điểm."
-            )
-            learning_rate = st.slider(
-                "Chọn learning_rate",
-                10, 1000, 200,
-                help="Tốc độ học khi tối ưu hóa không gian nhúng của t-SNE."
+            n_components = st.slider(
+                "Chọn số chiều đầu ra (n_components)",
+                2, 50, 2,
+                help="Số chiều để giảm. Nếu > 3, dùng thuật toán 'exact' và hiển thị KL Divergence."
             )
             
             if st.button("Chạy t-SNE", key="btn_tsne"):
-                # Nếu chưa có kết quả PCA, tự động tính PCA với n_components mặc định (50)
-                if st.session_state.X_pca is None:
-                    st.info("Chưa có kết quả PCA, tự động tính PCA với n_components = 50.")
-                    X_pca = PCA(n_components=50).fit_transform(X_scaled)
-                    st.session_state.X_pca = X_pca
-                else:
-                    X_pca = st.session_state.X_pca
-                    
-                tsne = TSNE(n_components=2, perplexity=perplexity, learning_rate=learning_rate, random_state=42)
-                X_tsne = tsne.fit_transform(X_pca)
-                st.success("t-SNE đã được tính!")
-                st.subheader("Kết quả t-SNE")
-                fig_tsne = ve_bieu_do(X_tsne, y, "Trực quan hóa t-SNE")
-                st.pyplot(fig_tsne)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+                experiment_name = f"Experiment_tSNE_{timestamp}"
+                mlflow.set_experiment(experiment_name)
+                st.session_state.experiment_name = experiment_name
+                st.write("Tên thí nghiệm:", experiment_name)
                 
-                # Logging với MLflow
+                # Chạy t-SNE trực tiếp trên X_scaled
+                if n_components <= 3:
+                    method = 'barnes_hut'
+                else:
+                    method = 'exact'               
+                tsne = TSNE(n_components=n_components, method=method, random_state=42)
+                X_tsne = tsne.fit_transform(X_scaled)  # Dùng X_scaled thay vì X_pca
+                st.success("t-SNE đã được tính!")
+                
+                st.subheader("Kết quả t-SNE")
+                if n_components == 2:
+                    fig_tsne = ve_bieu_do(X_tsne, y, "Trực quan hóa t-SNE 2D")
+                    st.pyplot(fig_tsne)
+                elif n_components == 3:
+                    fig_tsne = ve_bieu_do_3d(X_tsne, y, "Trực quan hóa t-SNE 3D")
+                    st.plotly_chart(fig_tsne, use_container_width=True)
+                else:
+                    kl_divergence = tsne.kl_divergence_
+                    st.write("**Giá trị KL Divergence:**", kl_divergence)
+                    st.info("KL Divergence càng nhỏ thì cấu trúc cục bộ của dữ liệu càng được bảo toàn tốt.")
+                
                 with mlflow.start_run():
-                    mlflow.log_param("perplexity", perplexity)
-                    mlflow.log_param("learning_rate", learning_rate)
-                    fig_tsne.savefig("tsne_visualization.png")
-                    mlflow.log_artifact("tsne_visualization.png")
+                    mlflow.log_param("n_components", n_components)
+                    mlflow.log_param("method", method)
+                    if n_components == 2:
+                        fig_tsne.savefig("tsne_visualization.png")
+                        mlflow.log_artifact("tsne_visualization.png")
+                    elif n_components == 3:
+                        fig_tsne.write_image("tsne_visualization.png")
+                        mlflow.log_artifact("tsne_visualization.png")
+                    else:
+                        mlflow.log_metric("kl_divergence", kl_divergence)
                 st.success("Kết quả t-SNE đã được lưu với MLflow!")
-
 # ----------- Tab 3: MLflow -----------
 with tab3:
     st.header("Tracking MLflow")
