@@ -17,9 +17,8 @@ import cv2
 # Tiêu đề ứng dụng
 st.title("Phân loại chữ số viết tay MNIST với Streamlit và MLflow")
 
-tab1, tab2, tab3,tab4 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "Lý thuyết về phân cụm",
-    "Xử lý dữ liệu",
     "Huấn luyện",
     "Mlflow"
 ])
@@ -77,8 +76,12 @@ with tab1:
     st.markdown("- **Davies-Bouldin Index**: Đánh giá sự tương đồng giữa các cụm.")
     st.image("image/Screenshot 2025-03-03 084626.png")
 
+    
+# ------------------------
+# Bước 2: Huấn luyện và đánh giá mô hình (Phân cụm với K-means & DBSCAN)
+# ------------------------
 with tab2:
-    st.header("1. Xử lý dữ liệu")
+    st.header("1. Chọn kích thước tập huấn luyện")
 
     # Kiểm tra nếu dữ liệu đã được tải chưa
     if "mnist_loaded" not in st.session_state:
@@ -111,36 +114,6 @@ with tab2:
         st.session_state.selected_sample_size = sample_size
         st.write(f"Dữ liệu MNIST đã được tải với {sample_size} mẫu!")
 
-    # Chỉ hiển thị bước chia tách khi dữ liệu đã tải
-    if st.session_state.mnist_loaded:
-        st.header("2. Chia tách dữ liệu")
-
-        test_size = st.slider("Chọn tỷ lệ dữ liệu Test", 0.1, 0.5, 0.2, 0.05)
-        valid_size = st.slider("Chọn tỷ lệ dữ liệu Validation từ Train", 0.1, 0.3, 0.2, 0.05)
-
-        if st.button("Chia tách dữ liệu"):
-            X_train_full, X_test, y_train_full, y_test = train_test_split(
-                st.session_state.X, st.session_state.y, test_size=test_size, random_state=42, stratify=st.session_state.y
-            )
-            X_train, X_valid, y_train, y_valid = train_test_split(
-                X_train_full, y_train_full, test_size=valid_size, random_state=42, stratify=y_train_full
-            )
-
-            # Lưu vào session_state
-            st.session_state.X_train = X_train
-            st.session_state.X_valid = X_valid
-            st.session_state.X_test = X_test
-            st.session_state.y_train = y_train
-            st.session_state.y_valid = y_valid
-            st.session_state.y_test = y_test
-            st.session_state.data_split_done = True
-
-        # Hiển thị thông tin sau khi chia tách
-        if st.session_state.get("data_split_done", False):
-            st.write(f"Dữ liệu Train: {st.session_state.X_train.shape}")
-            st.write(f"Dữ liệu Validation: {st.session_state.X_valid.shape}")
-            st.write(f"Dữ liệu Test: {st.session_state.X_test.shape}")
-    
     # Hiển thị hình ảnh minh họa
     st.subheader("Ví dụ một vài hình ảnh minh họa")
     
@@ -165,11 +138,7 @@ with tab2:
     else:
         st.warning("Vui lòng tải dữ liệu trước khi hiển thị hình ảnh!")
         
-# ------------------------
-# Bước 2: Huấn luyện và đánh giá mô hình (Phân cụm với K-means & DBSCAN)
-# ------------------------
-with tab3:
-    st.header("2. Huấn luyện và đánh giá mô hình")
+    st.header("Huấn luyện và đánh giá mô hình")
     # Người dùng chọn mô hình phân cụm
     model_choice = st.selectbox("Chọn mô hình phân cụm", ["K-means", "DBSCAN"], key="model_choice_cluster")
     
@@ -307,7 +276,7 @@ with tab3:
         plt.colorbar(scatter, ax=ax)
         
         st.pyplot(fig)
-with tab4:
+with tab3:
     st.header("Tracking MLflow")
     try:
         from mlflow.tracking import MlflowClient
