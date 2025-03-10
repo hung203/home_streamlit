@@ -7,3 +7,4 @@ pandas
 streamlit-drawable-canvas
 Pillow
 opencv-python-headless
+plotly
