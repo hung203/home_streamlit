@@ -116,17 +116,14 @@ import datetime
 import mlflow
 import pandas as pd
 
-# Hàm vẽ biểu đồ 2D (Matplotlib)
 def ve_bieu_do(X, y, title):
     import matplotlib.pyplot as plt
     import numpy as np
-    import mplcursors  # Thêm thư viện mplcursors để hỗ trợ tooltip
-    
+    # Tạo figure và xác định các nhãn duy nhất
     fig, ax = plt.subplots(figsize=(10, 8))
     unique_labels = np.unique(y)
     n_labels = len(unique_labels)
-    
-    # Chọn colormap phù hợp với số lượng nhãn
+    # Chọn colormap dựa trên số lượng nhãn để màu sắc được phân biệt
     if n_labels <= 10:
         cmap = plt.cm.get_cmap('tab10', n_labels)
     elif n_labels <= 20:
@@ -135,21 +132,14 @@ def ve_bieu_do(X, y, title):
         cmap = plt.cm.get_cmap('viridis', n_labels)
     
     scatter = ax.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap, s=10)
+    # Tạo colorbar với các tick rời rạc
     cbar = plt.colorbar(scatter, ticks=range(n_labels))
     cbar.ax.set_yticklabels(unique_labels)
     
     ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    
-    # Sử dụng mplcursors để thêm tooltip khi di chuột lên các điểm
-    cursor = mplcursors.cursor(scatter, hover=True)
-    cursor.connect("add", lambda sel: sel.annotation.set_text(
-        f"Index: {sel.index}\nLabel: {y[sel.index]}\nX: {X[sel.index, 0]:.2f}\nY: {X[sel.index, 1]:.2f}"
-    ))
-    
     return fig
-
 
 # Hàm vẽ biểu đồ 3D tương tác (Plotly) với màu sắc rời rạc
 def ve_bieu_do_3d(X, y, title):
@@ -182,6 +172,7 @@ def ve_bieu_do_3d(X, y, title):
         )
     )
     return fig
+
 
 
 with tab2:
