@@ -170,11 +170,7 @@ with tab2:
         )
     
     # Nút huấn luyện
-    if st.button("Huấn luyện mô hình"):
-        if "X_train" not in st.session_state or "X_valid" not in st.session_state:
-            st.error("Bạn cần chia tách dữ liệu trước!")
-            st.stop()
-        
+    if st.button("Huấn luyện mô hình"):    
         X_train_used = st.session_state.X_train
         y_train_used = st.session_state.y_train
         X_valid = st.session_state.X_valid
