@@ -44,16 +44,6 @@ def tai_du_lieu_MNIST():
         st.session_state.mnist_loaded = True
         st.success(f"Dữ liệu MNIST đã được tải với {sample_size} mẫu!")
 
-# ------------------ HÀM VẼ BIỂU ĐỒ TRỰC QUAN HÓA ------------------
-def ve_bieu_do(X_embedded, y, tieu_de):
-    fig, ax = plt.subplots(figsize=(8, 6))
-    scatter = ax.scatter(X_embedded[:, 0], X_embedded[:, 1], c=y, cmap='tab10', alpha=0.6)
-    ax.set_title(tieu_de)
-    ax.set_xlabel("Thành phần 1")
-    ax.set_ylabel("Thành phần 2")
-    plt.colorbar(scatter, ax=ax, label="Chữ số")
-    return fig
-
 # ------------------ TẠO 3 TAB ------------------
 tab1, tab2, tab3 = st.tabs(["Lý thuyết về giảm chiều dữ liệu", "Thực hiện giảm chiều", "MLflow"])
 
@@ -129,22 +119,41 @@ import pandas as pd
 # Hàm vẽ biểu đồ 2D (Matplotlib)
 def ve_bieu_do(X, y, title):
     import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(10, 8))
-    plt.scatter(X[:, 0], X[:, 1], c=y, cmap='viridis', s=10)
-    plt.colorbar()
-    plt.title(title)
-    plt.xlabel('X')
-    plt.ylabel('Y')
+    import numpy as np
+    # Tạo figure và xác định các nhãn duy nhất
+    fig, ax = plt.subplots(figsize=(10, 8))
+    unique_labels = np.unique(y)
+    n_labels = len(unique_labels)
+    # Chọn colormap dựa trên số lượng nhãn để màu sắc được phân biệt
+    if n_labels <= 10:
+        cmap = plt.cm.get_cmap('tab10', n_labels)
+    elif n_labels <= 20:
+        cmap = plt.cm.get_cmap('tab20', n_labels)
+    else:
+        cmap = plt.cm.get_cmap('viridis', n_labels)
+    
+    scatter = ax.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap, s=10)
+    # Tạo colorbar với các tick rời rạc
+    cbar = plt.colorbar(scatter, ticks=range(n_labels))
+    cbar.ax.set_yticklabels(unique_labels)
+    
+    ax.set_title(title)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
     return fig
 
-# Hàm vẽ biểu đồ 3D tương tác (Plotly)
+# Hàm vẽ biểu đồ 3D tương tác (Plotly) với màu sắc rời rạc
 def ve_bieu_do_3d(X, y, title):
+    import pandas as pd
+    import plotly.express as px
+    # Chuyển nhãn về dạng chuỗi để Plotly hiểu là giá trị rời rạc
     df = pd.DataFrame({
         'X': X[:, 0],
         'Y': X[:, 1],
         'Z': X[:, 2],
-        'Label': y
+        'Label': y.astype(str)
     })
+    # Sử dụng color_discrete_sequence để đảm bảo các màu sắc được phân biệt
     fig = px.scatter_3d(
         df, 
         x='X', 
@@ -152,7 +161,7 @@ def ve_bieu_do_3d(X, y, title):
         z='Z', 
         color='Label', 
         title=title,
-        color_continuous_scale='Viridis',
+        color_discrete_sequence=px.colors.qualitative.G10,
         opacity=0.7,
         height=600
     )
@@ -164,6 +173,7 @@ def ve_bieu_do_3d(X, y, title):
         )
     )
     return fig
+
 
 with tab2:
     st.title("Trực quan hóa PCA & t-SNE trên MNIST")
