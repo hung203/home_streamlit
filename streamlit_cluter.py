@@ -14,6 +14,23 @@ from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 import cv2
 
+if "mnist_loaded" not in st.session_state:
+    st.session_state.mnist_loaded = False
+if "example_images" not in st.session_state:
+    st.session_state.example_images = []
+if "X_train" not in st.session_state:
+    st.session_state.X_train = None
+if "y_train" not in st.session_state:
+    st.session_state.y_train = None
+if "X_valid" not in st.session_state:
+    st.session_state.X_valid = None
+if "y_valid" not in st.session_state:
+    st.session_state.y_valid = None
+if "experiment_name" not in st.session_state:
+    st.session_state.experiment_name = None
+if "model" not in st.session_state:
+    st.session_state.model = None
+    
 # Tiêu đề ứng dụng
 st.title("Phân loại chữ số viết tay MNIST với Streamlit và MLflow")
 
