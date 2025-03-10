@@ -9,3 +9,5 @@ Pillow
 opencv-python-headless
 plotly
 datetime
+pyarrow          # Hỗ trợ pandas khi làm việc với dữ liệu lớn
+protobuf         # Tránh lỗi giữa Streamlit và MLflow (do phiên bản không tương thích)
