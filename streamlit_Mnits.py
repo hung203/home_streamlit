@@ -14,11 +14,12 @@ import pandas as pd
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 import cv2
+import datetime
 # Tiêu đề ứng dụng
 st.title("Phân loại chữ số viết tay MNIST với Streamlit và MLflow")
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    "Xử lý dữ liệu",
+    "Chia tách dữ liệu",
     "Huấn luyện",
     "Dự đoán",
     'Mlflow'
@@ -28,7 +29,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # Bước 1: Xử lý dữ liệu
 # ------------------------
 with tab1:
-    st.header("1. Xử lý dữ liệu")
+    st.header("1. Chọn số lượng dữ liệu")
 
     # Kiểm tra nếu dữ liệu đã được tải chưa
     if "mnist_loaded" not in st.session_state:
@@ -187,6 +188,16 @@ with tab2:
             help="Bậc của hàm đa thức (chỉ áp dụng cho kernel 'poly'). Giá trị cao hơn tạo ra các đặc trưng phức tạp hơn."
         ) if kernel == "poly" else None
     
+    # Nhập tên cho thí nghiệm MLflow
+    experiment_name = st.text_input(
+        "Nhập tên cho thí nghiệm MLflow", 
+        value="",
+        help="Tên để lưu thí nghiệm trong MLflow. Nếu để trống, hệ thống sẽ tự tạo tên dựa trên thời gian."
+    )
+    if not experiment_name:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        experiment_name = f"Neural_Network_MNIST_{timestamp}"
+    
     # Nút huấn luyện
     if st.button("Huấn luyện mô hình"):
         if "X_train" not in st.session_state or "X_valid" not in st.session_state:
@@ -208,6 +219,14 @@ with tab2:
         with mlflow.start_run():
             # Log tên thí nghiệm dưới dạng tham số
             mlflow.log_param("experiment_name", experiment_name)
+            
+            # Khởi tạo thanh trạng thái
+            progress_bar = st.progress(0)
+            status_text = st.empty()  # Để cập nhật thông báo trạng thái
+            
+            # Cập nhật trạng thái: Chuẩn bị dữ liệu
+            status_text.text("Đang chuẩn bị dữ liệu...")
+            progress_bar.progress(10)  # 10% tiến trình
             
             if model_choice == "Decision Tree":
                 model = DecisionTreeClassifier(
@@ -235,7 +254,7 @@ with tab2:
                 else:
                     model_params["gamma"] = gamma
                     mlflow.log_param("gamma", gamma)
-    
+
                 if kernel == "poly":
                     model_params["degree"] = degree
                     mlflow.log_param("degree", degree)
@@ -243,24 +262,41 @@ with tab2:
                 model = SVC(**model_params)
                 
                 X_train_used, X_valid = X_train_used_scaled, X_valid_scaled
-    
+            
+            # Cập nhật trạng thái: Đang huấn luyện mô hình
+            status_text.text("Đang huấn luyện mô hình...")
+            progress_bar.progress(50)  # 50% tiến trình
+            
             # Huấn luyện mô hình
             model.fit(X_train_used, y_train_used)
+            
+            # Cập nhật trạng thái: Đang dự đoán và đánh giá
+            status_text.text("Đang dự đoán và đánh giá...")
+            progress_bar.progress(80)  # 80% tiến trình
+            
             y_pred = model.predict(X_valid)
-    
+        
             # Lưu các kết quả và mô hình vào session_state
             st.session_state.model = model
             st.session_state.trained_model_name = model_choice
             st.session_state.train_accuracy = accuracy_score(y_valid, y_pred)
             st.session_state.train_report = classification_report(y_valid, y_pred)
             
+            # Cập nhật trạng thái: Đang lưu kết quả vào MLflow
+            status_text.text("Đang lưu kết quả vào MLflow...")
+            progress_bar.progress(90)  # 90% tiến trình
+            
             mlflow.log_param("model", model_choice)
             mlflow.log_metric("accuracy", st.session_state.train_accuracy)
             mlflow.sklearn.log_model(model, "model")
-    
+        
+            # Hoàn tất
+            status_text.text("Hoàn tất huấn luyện!")
+            progress_bar.progress(100)  # 100% tiến trình
+        
         # Lưu tên thí nghiệm vào session_state và hiển thị ra giao diện
         st.session_state.experiment_name = experiment_name
-        st.write("Tên thí nghiệm:", experiment_name)
+    st.write("Tên thí nghiệm:", experiment_name)
     
     # Hiển thị kết quả sau khi huấn luyện
     if "train_accuracy" in st.session_state:

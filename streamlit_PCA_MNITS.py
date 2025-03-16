@@ -9,7 +9,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import fetch_openml
 import datetime
+import plotly.express as px
 
+mlflow.set_tracking_uri("file:./mlruns")
 # ------------------ KHAI BÁO BIẾN TRẠNG THÁI ------------------
 if "mnist_loaded" not in st.session_state:
     st.session_state.mnist_loaded = False
@@ -44,6 +46,67 @@ def tai_du_lieu_MNIST():
         st.session_state.mnist_loaded = True
         st.success(f"Dữ liệu MNIST đã được tải với {sample_size} mẫu!")
 
+# ------------------ HÀM VẼ BIỂU ĐỒ TRỰC QUAN HÓA ------------------
+def ve_bieu_do(X, y, title):
+    df = pd.DataFrame({
+        'X': X[:, 0],
+        'Y': X[:, 1],
+        'Label': y.astype(str)
+    })
+    fig = px.scatter(
+        df,
+        x='X',
+        y='Y',
+        color='Label',
+        title=title,
+        labels={'X': 'Thành phần 1', 'Y': 'Thành phần 2'},
+        color_discrete_sequence=px.colors.qualitative.T10 if len(set(y)) <= 10 else px.colors.qualitative.Dark24,
+        opacity=0.7,
+        height=600
+    )
+    fig.update_layout(
+        legend_title_text='Chữ số',
+        title_font_size=14,
+        xaxis_title_font_size=12,
+        yaxis_title_font_size=12,
+        legend=dict(x=1.05, y=1)
+    )
+    return fig
+
+def ve_bieu_do_3d(X, y, title):
+    df = pd.DataFrame({
+        'X': X[:, 0],
+        'Y': X[:, 1],
+        'Z': X[:, 2],
+        'Label': y.astype(str)
+    })
+    fig = px.scatter_3d(
+        df,
+        x='X',
+        y='Y',
+        z='Z',
+        color='Label',
+        title=title,
+        labels={'X': 'Thành phần 1', 'Y': 'Thành phần 2', 'Z': 'Thành phần 3'},
+        color_discrete_sequence=px.colors.qualitative.T10 if len(set(y)) <= 10 else px.colors.qualitative.Dark24,
+        opacity=0.7,
+        height=600
+    )
+    fig.update_layout(
+        legend_title_text='Chữ số',
+        title_font_size=14,
+        scene=dict(
+            xaxis_title='Thành phần 1',
+            yaxis_title='Thành phần 2',
+            zaxis_title='Thành phần 3',
+            xaxis_title_font_size=12,
+            yaxis_title_font_size=12,
+            zaxis_title_font_size=12
+        ),
+        legend=dict(x=1.05, y=1)
+    )
+    return fig
+
 # ------------------ TẠO 3 TAB ------------------
 tab1, tab2, tab3 = st.tabs(["Lý thuyết về giảm chiều dữ liệu", "Thực hiện giảm chiều", "MLflow"])
 
@@ -55,126 +118,108 @@ with tab1:
     **Giảm chiều dữ liệu** là quá trình chuyển đổi dữ liệu từ không gian có số chiều cao (với nhiều đặc trưng) sang không gian có số chiều thấp hơn mà vẫn giữ lại được những đặc trưng quan trọng nhất. Quá trình này giúp:
     - **Trực quan hóa dữ liệu 📊:** Hiển thị dữ liệu trong không gian 2D hoặc 3D, từ đó dễ dàng nhận biết cấu trúc, nhóm (clusters) hay các mối liên hệ giữa các mẫu.
     - **Giảm nhiễu và tăng tốc độ tính toán ⚡:** Loại bỏ những đặc trưng dư thừa, không cần thiết giúp mô hình học máy chạy nhanh hơn và tránh tình trạng quá khớp (overfitting).
-
-    ### Các phương pháp giảm chiều dữ liệu phổ biến 🔍
-
-    #### 1. PCA (Principal Component Analysis) 💡
-    - **Nguyên lý:**  
-      PCA tìm các thành phần chính sao cho phần lớn phương sai của dữ liệu được giữ lại. Giả sử dữ liệu đã được trung bình hóa, ta có:
-      
-      - **Ma trận hiệp phương sai:**
-      $$ \Sigma = \frac{1}{n-1} X^T X $$
-      
-      - **Phân tích giá trị riêng:**
-      $$ \Sigma v = \lambda v $$
-      
-      - **Chiếu dữ liệu lên không gian các thành phần chính:**
-      $$ Z = XW $$
-      
-      Trong đó, **W** là ma trận chứa các vector riêng (eigenvectors) tương ứng với các giá trị riêng (eigenvalues) lớn nhất.
-
-    #### 2. t-SNE (t-distributed Stochastic Neighbor Embedding) 🔥
-    - **Nguyên lý:**  
-      t-SNE trực quan hóa dữ liệu bằng cách chuyển đổi khoảng cách giữa các điểm trong không gian cao chiều thành xác suất, sau đó tái hiện các mối quan hệ này trong không gian 2D hoặc 3D:
-      
-      - **Xác suất khoảng cách trong không gian cao chiều:**
-      $$ p_{j|i} = \frac{\exp(-\|x_i - x_j\|^2 / 2\sigma_i^2)}{\sum_{k \neq i}\exp(-\|x_i - x_k\|^2 / 2\sigma_i^2)} $$
-      
-      - **Xác suất đối xứng:**
-      $$ p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n} $$
-      
-      - **Trong không gian thấp chiều, sử dụng phân phối Student’s t:**
-      $$ q_{ij} = \frac{(1+\|y_i-y_j\|^2)^{-1}}{\sum_{k \neq l}(1+\|y_k-y_l\|^2)^{-1}} $$
-      
-      - **Hàm mất mát Kullback-Leibler cần tối thiểu hóa:**
-      $$ KL(P\|Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}} $$
-      
-    ### Ứng dụng của giảm chiều dữ liệu 💼
-    - **Trực quan hóa dữ liệu:**  
-      Giúp các nhà khoa học dữ liệu và kỹ sư hiểu được cấu trúc nội tại của dữ liệu, nhận diện các mẫu bất thường và phân nhóm dữ liệu.
-    - **Tiền xử lý cho học máy:**  
-      Giảm số chiều dữ liệu giúp giảm độ phức tạp của mô hình, tăng hiệu suất tính toán và giảm nguy cơ quá khớp.
-    - **Khai phá dữ liệu:**  
-      Phát hiện các mối quan hệ ẩn, hiểu sâu hơn về dữ liệu và đưa ra các quyết định kinh doanh dựa trên dữ liệu.
-    
-    ### Lưu ý khi thực hiện giảm chiều dữ liệu ⚠️
-    - **Lựa chọn thuật toán:**  
-      Tùy vào đặc điểm của dữ liệu và mục tiêu phân tích mà bạn có thể lựa chọn phương pháp giảm chiều phù hợp (PCA cho dữ liệu tuyến tính, t-SNE cho dữ liệu phi tuyến).
-    - **Tinh chỉnh tham số:**  
-      Các tham số như số lượng thành phần trong PCA, perplexity và learning rate trong t-SNE rất quan trọng và cần được thử nghiệm để đạt được kết quả tốt nhất.
-    - **Hiểu rõ dữ liệu:**  
-      Phân tích và hiểu rõ dữ liệu ban đầu sẽ giúp việc lựa chọn phương pháp và cấu hình tham số trở nên hiệu quả hơn.
     """)
 
+    st.header("📌 Lý thuyết về PCA (Phân tích thành phần chính)", divider="blue")
+
+    st.subheader("🔹 PCA là gì?")
+    st.write(r"""
+    PCA (Principal Component Analysis) là một kỹ thuật giảm chiều dữ liệu, chuyển đổi dữ liệu ban đầu thành các **thành phần chính** giữ phần lớn phương sai. Hình ảnh dưới đây minh họa các bước thực hiện PCA.
+    """)
+
+    st.subheader("2️⃣ Các bước thực hiện PCA", divider="blue")
+
+    # Bước 1
+    st.markdown("#### **Bước 1: Tìm vector trung bình (Find mean vector)**")
+    st.write(r"""
+    - Tính vector trung bình của dữ liệu ban đầu (ký hiệu là $\mathbf{X}$).  
+    - Vector trung bình được biểu diễn bằng đường thẳng màu xanh lá cây chạy qua tâm của tập dữ liệu.
+    """)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("image/Screenshot 2025-03-12 203225.png")
+
+    # Bước 2
+    st.markdown("#### **Bước 2: Trừ vector trung bình (Subtract mean)**")
+    st.write(r"""
+    - Trừ vector trung bình khỏi từng điểm dữ liệu để đưa dữ liệu về tâm tại gốc tọa độ (ký hiệu là $\hat{\mathbf{X}}$).  
+    - Kết quả là dữ liệu đã được dịch chuyển, với trung bình bằng 0.
+    """)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("image/Screenshot 2025-03-12 203258.png")
+
+    # Bước 3
+    st.markdown("#### **Bước 3: Tính ma trận hiệp phương sai (Compute covariance matrix)**")
+    st.write(r"""
+    - Tính ma trận hiệp phương sai $\mathbf{S}$ từ dữ liệu đã chuẩn hóa.  
+    - Công thức: $\mathbf{S} = \frac{1}{N} \mathbf{X} \mathbf{X}^T$, trong đó $\mathbf{X}$ là ma trận dữ liệu, $N$ là số mẫu.
+    """)
+
+    # Bước 4
+    st.markdown("#### **Bước 4: Tính giá trị riêng (eigenvalues) và vector riêng (eigenvectors) của $\mathbf{S}$**")
+    st.write(r"""
+    - Tìm các giá trị riêng ($\lambda_1, \lambda_2, \ldots, \lambda_D$) và vector riêng ($\mathbf{u}_1, \mathbf{u}_2, \ldots, \mathbf{u}_D$) của ma trận hiệp phương sai $\mathbf{S}$.  
+    - Vector riêng đại diện cho hướng của thành phần chính, giá trị riêng cho biết mức độ biến thiên.
+    """)
+
+    # Bước 5
+    st.markdown(r"#### **Bước 5: Chọn $K$ vector riêng có giá trị riêng lớn nhất (Pick $K$ eigenvectors with highest eigenvalues)**")
+    st.write(r"""
+    - Chọn $K$ vector riêng tương ứng với $K$ giá trị riêng lớn nhất (ví dụ: $\mathbf{u}_1$ và $\mathbf{u}_2$).  
+    - Các vector này được vẽ bằng đường đỏ, đại diện cho các thành phần chính.
+    """)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("image/Screenshot 2025-03-12 203337.png")
+
+    # Bước 6
+    st.markdown("#### **Bước 6: Chuyển đổi dữ liệu sang vector riêng đã chọn (Project data to selected eigenvectors)**")
+    st.write(r"""
+    - Nhân dữ liệu đã chuẩn hóa ($\hat{\mathbf{X}}$) với ma trận gồm $K$ vector riêng để thu dữ liệu trong không gian mới.  
+    - Dữ liệu được chiếu lên các hướng $\mathbf{u}_1$ và $\mathbf{u}_2$.
+    """)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("image/Screenshot 2025-03-12 203327.png")
+
+    # Bước 7
+    st.markdown("#### **Bước 7: Lấy các điểm chiếu trong không gian chiều thấp (Obtain projected points in low dimension)**")
+    st.write(r"""
+    - Dữ liệu cuối cùng được biểu diễn trong không gian $K$ chiều (ví dụ: 2D).  
+    - Kết quả là tập dữ liệu mới $\mathbf{Z}$, giữ lại phần lớn thông tin từ dữ liệu gốc.
+    """)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("image/Screenshot 2025-03-12 203306.png")
+
+    # Lưu ý quan trọng về PCA
+    st.markdown("### 🎨 Lưu ý quan trọng về PCA")
+    st.write(r"""
+    - Hình ảnh minh họa nhấn mạnh rằng PCA giảm chiều dữ liệu bằng cách giữ các thành phần chính có phương sai lớn nhất.  
+    - Các bước trên giả định dữ liệu đã được chuẩn hóa (trung bình = 0, độ lệch chuẩn = 1).
+    """)
+
+      
+    # ### Ứng dụng của giảm chiều dữ liệu 💼
+
+    # # - **Trực quan hóa dữ liệu:**  
+    # #   Giúp các nhà khoa học dữ liệu và kỹ sư hiểu được cấu trúc nội tại của dữ liệu, nhận diện các mẫu bất thường và phân nhóm dữ liệu.
+    # # - **Tiền xử lý cho học máy:**  
+    # #   Giảm số chiều dữ liệu giúp giảm độ phức tạp của mô hình, tăng hiệu suất tính toán và giảm nguy cơ quá khớp.
+    # # - **Khai phá dữ liệu:**  
+    # #   Phát hiện các mối quan hệ ẩn, hiểu sâu hơn về dữ liệu và đưa ra các quyết định kinh doanh dựa trên dữ liệu.
+    
+    # # ### Lưu ý khi thực hiện giảm chiều dữ liệu ⚠️
+    # # - **Lựa chọn thuật toán:**  
+    # #   Tùy vào đặc điểm của dữ liệu và mục tiêu phân tích mà bạn có thể lựa chọn phương pháp giảm chiều phù hợp (PCA cho dữ liệu tuyến tính, t-SNE cho dữ liệu phi tuyến).
+    # # - **Tinh chỉnh tham số:**  
+    # #   Các tham số như số lượng thành phần trong PCA, perplexity và learning rate trong t-SNE rất quan trọng và cần được thử nghiệm để đạt được kết quả tốt nhất.
+    # # - **Hiểu rõ dữ liệu:**  
+    # #   Phân tích và hiểu rõ dữ liệu ban đầu sẽ giúp việc lựa chọn phương pháp và cấu hình tham số trở nên hiệu quả hơn.
+    # """)
+
 # ----------- Tab 2: Thực hiện giảm chiều -----------
-import streamlit as st
-import plotly.express as px
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-from sklearn.preprocessing import StandardScaler
-import datetime
-import mlflow
-import pandas as pd
-
-def ve_bieu_do(X, y, title):
-    import matplotlib.pyplot as plt
-    import numpy as np
-    # Tạo figure và xác định các nhãn duy nhất
-    fig, ax = plt.subplots(figsize=(10, 8))
-    unique_labels = np.unique(y)
-    n_labels = len(unique_labels)
-    # Chọn colormap dựa trên số lượng nhãn để màu sắc được phân biệt
-    if n_labels <= 10:
-        cmap = plt.cm.get_cmap('tab10', n_labels)
-    elif n_labels <= 20:
-        cmap = plt.cm.get_cmap('tab20', n_labels)
-    else:
-        cmap = plt.cm.get_cmap('viridis', n_labels)
-    
-    scatter = ax.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap, s=10)
-    # Tạo colorbar với các tick rời rạc
-    cbar = plt.colorbar(scatter, ticks=range(n_labels))
-    cbar.ax.set_yticklabels(unique_labels)
-    
-    ax.set_title(title)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    return fig
-
-# Hàm vẽ biểu đồ 3D tương tác (Plotly) với màu sắc rời rạc
-def ve_bieu_do_3d(X, y, title):
-    import pandas as pd
-    import plotly.express as px
-    # Chuyển nhãn về dạng chuỗi để Plotly hiểu là giá trị rời rạc
-    df = pd.DataFrame({
-        'X': X[:, 0],
-        'Y': X[:, 1],
-        'Z': X[:, 2],
-        'Label': y.astype(str)
-    })
-    # Sử dụng color_discrete_sequence để đảm bảo các màu sắc được phân biệt
-    fig = px.scatter_3d(
-        df, 
-        x='X', 
-        y='Y', 
-        z='Z', 
-        color='Label', 
-        title=title,
-        color_discrete_sequence=px.colors.qualitative.G10,
-        opacity=0.7,
-        height=600
-    )
-    fig.update_layout(
-        scene=dict(
-            xaxis_title='X',
-            yaxis_title='Y',
-            zaxis_title='Z'
-        )
-    )
-    return fig
-
-
-
 with tab2:
     st.title("Trực quan hóa PCA & t-SNE trên MNIST")
     if not st.session_state.mnist_loaded:
@@ -202,41 +247,58 @@ with tab2:
                 help="Số thành phần chính cần giữ lại. Nếu > 3, hiển thị tỷ lệ phương sai thay vì hình ảnh."
             )
             
+            experiment_name_pca = st.text_input(
+                "Đặt tên cho thí nghiệm MLflow (PCA)",
+                value="",
+                help="Nhập tên thí nghiệm cho MLflow. Nếu để trống, hệ thống sẽ tự động tạo tên dựa trên timestamp."
+            )
+            
             if st.button("Chạy PCA", key="btn_pca"):
                 timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-                experiment_name = f"Experiment_PCA_{timestamp}"
+                if experiment_name_pca.strip() == "":
+                    experiment_name = f"Experiment_PCA_{timestamp}"
+                else:
+                    experiment_name = experiment_name_pca.strip()
+                
                 mlflow.set_experiment(experiment_name)
                 st.session_state.experiment_name = experiment_name
                 st.write("Tên thí nghiệm:", experiment_name)
                 
-                pca = PCA(n_components=n_components)
-                X_pca = pca.fit_transform(X_scaled)
-                st.session_state.X_pca = X_pca
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                with st.spinner("Đang tính toán PCA..."):
+                    status_text.text("Đang chuẩn hóa dữ liệu...")
+                    progress_bar.progress(10)
+                    
+                    status_text.text("Đang thực hiện PCA...")
+                    pca = PCA(n_components=n_components)
+                    X_pca = pca.fit_transform(X_scaled)
+                    st.session_state.X_pca = X_pca
+                    
+                    # Tính total_variance trong mọi trường hợp
+                    explained_variance_ratio = pca.explained_variance_ratio_
+                    total_variance = sum(explained_variance_ratio)
+                    
+                    progress_bar.progress(100)
+                    status_text.text("Hoàn thành PCA!")
+                
                 st.success("PCA đã được tính!")
                 
                 st.subheader("Kết quả PCA")
                 if n_components == 2:
                     fig_pca = ve_bieu_do(X_pca[:, :2], y, "Trực quan hóa PCA 2D")
-                    st.pyplot(fig_pca)
+                    st.plotly_chart(fig_pca, use_container_width=True, renderer="plotly_mimetype")
                 elif n_components == 3:
                     fig_pca = ve_bieu_do_3d(X_pca, y, "Trực quan hóa PCA 3D")
-                    st.plotly_chart(fig_pca, use_container_width=True)
+                    st.plotly_chart(fig_pca, use_container_width=True, renderer="plotly_mimetype")
                 else:
-                    explained_variance_ratio = pca.explained_variance_ratio_
-                    total_variance = sum(explained_variance_ratio)
                     st.write("**Tỷ lệ phương sai giải thích cho từng chiều:**", explained_variance_ratio)
                     st.write("**Tổng tỷ lệ phương sai giữ lại:**", total_variance)
                 
                 with mlflow.start_run():
                     mlflow.log_param("n_components", n_components)
-                    if n_components == 2:
-                        fig_pca.savefig("pca_visualization.png")
-                        mlflow.log_artifact("pca_visualization.png")
-                    elif n_components == 3:
-                        fig_pca.write_image("pca_visualization.png")
-                        mlflow.log_artifact("pca_visualization.png")
-                    else:
-                        mlflow.log_metric("total_explained_variance", total_variance)
+                    mlflow.log_metric("total_explained_variance", total_variance)
                 st.success("Kết quả PCA đã được lưu với MLflow!")
         
         elif option == "t-SNE":
@@ -247,29 +309,53 @@ with tab2:
                 help="Số chiều để giảm. Nếu > 3, dùng thuật toán 'exact' và hiển thị KL Divergence."
             )
             
+            experiment_name_tsne = st.text_input(
+                "Đặt tên cho thí nghiệm MLflow (t-SNE)",
+                value="",
+                help="Nhập tên thí nghiệm cho MLflow. Nếu để trống, hệ thống sẽ tự động tạo tên dựa trên timestamp."
+            )
+            
             if st.button("Chạy t-SNE", key="btn_tsne"):
                 timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-                experiment_name = f"Experiment_tSNE_{timestamp}"
+                if experiment_name_tsne.strip() == "":
+                    experiment_name = f"Experiment_tSNE_{timestamp}"
+                else:
+                    experiment_name = experiment_name_tsne.strip()
+                
                 mlflow.set_experiment(experiment_name)
                 st.session_state.experiment_name = experiment_name
                 st.write("Tên thí nghiệm:", experiment_name)
                 
-                # Chạy t-SNE trực tiếp trên X_scaled
-                if n_components <= 3:
-                    method = 'barnes_hut'
-                else:
-                    method = 'exact'               
-                tsne = TSNE(n_components=n_components, method=method, random_state=42)
-                X_tsne = tsne.fit_transform(X_scaled)  # Dùng X_scaled thay vì X_pca
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                with st.spinner("Đang tính toán t-SNE..."):
+                    status_text.text("Đang chuẩn hóa dữ liệu...")
+                    progress_bar.progress(10)
+                    
+                    if n_components <= 3:
+                        method = 'barnes_hut'
+                    else:
+                        method = 'exact'
+                    
+                    status_text.text("Đang thực hiện t-SNE... (có thể mất vài phút)")
+                    tsne = TSNE(n_components=n_components, method=method, random_state=42)
+                    
+                    progress_bar.progress(50)
+                    X_tsne = tsne.fit_transform(X_scaled)
+                    
+                    progress_bar.progress(100)
+                    status_text.text("Hoàn thành t-SNE!")
+                
                 st.success("t-SNE đã được tính!")
                 
                 st.subheader("Kết quả t-SNE")
                 if n_components == 2:
                     fig_tsne = ve_bieu_do(X_tsne, y, "Trực quan hóa t-SNE 2D")
-                    st.pyplot(fig_tsne)
+                    st.plotly_chart(fig_tsne, use_container_width=True, renderer="plotly_mimetype")
                 elif n_components == 3:
                     fig_tsne = ve_bieu_do_3d(X_tsne, y, "Trực quan hóa t-SNE 3D")
-                    st.plotly_chart(fig_tsne, use_container_width=True)
+                    st.plotly_chart(fig_tsne, use_container_width=True, renderer="plotly_mimetype")
                 else:
                     kl_divergence = tsne.kl_divergence_
                     st.write("**Giá trị KL Divergence:**", kl_divergence)
@@ -278,15 +364,10 @@ with tab2:
                 with mlflow.start_run():
                     mlflow.log_param("n_components", n_components)
                     mlflow.log_param("method", method)
-                    if n_components == 2:
-                        fig_tsne.savefig("tsne_visualization.png")
-                        mlflow.log_artifact("tsne_visualization.png")
-                    elif n_components == 3:
-                        fig_tsne.write_image("tsne_visualization.png")
-                        mlflow.log_artifact("tsne_visualization.png")
-                    else:
+                    if n_components > 3:  # Chỉ ghi kl_divergence khi n_components > 3
                         mlflow.log_metric("kl_divergence", kl_divergence)
                 st.success("Kết quả t-SNE đã được lưu với MLflow!")
+
 # ----------- Tab 3: MLflow -----------
 with tab3:
     st.header("Tracking MLflow")
@@ -294,7 +375,6 @@ with tab3:
         from mlflow.tracking import MlflowClient
         client = MlflowClient()
     
-        # Lấy danh sách thí nghiệm từ MLflow
         experiments = mlflow.search_experiments()
     
         if experiments:
@@ -310,28 +390,23 @@ with tab3:
             df_experiments = pd.DataFrame(experiment_data)
             st.dataframe(df_experiments)
     
-            # Chọn thí nghiệm dựa trên tên
             selected_exp_name = st.selectbox(
                 "🔍 Chọn thí nghiệm để xem chi tiết",
                 options=[exp.name for exp in experiments]
             )
     
-            # Lấy ID của thí nghiệm được chọn
             selected_exp_id = next(exp.experiment_id for exp in experiments if exp.name == selected_exp_name)
     
-            # Lấy danh sách runs trong thí nghiệm được chọn
             runs = mlflow.search_runs(selected_exp_id)
             if not runs.empty:
                 st.write("#### Danh sách runs")
                 st.dataframe(runs)
     
-                # Chọn run để xem chi tiết
                 selected_run_id = st.selectbox(
                     "🔍 Chọn run để xem chi tiết",
                     options=runs["run_id"]
                 )
     
-                # Hiển thị chi tiết run
                 run = mlflow.get_run(selected_run_id)
                 st.write("##### Thông tin run")
                 st.write(f"*Run ID:* {run.info.run_id}")
@@ -344,7 +419,6 @@ with tab3:
                 st.write("##### Params")
                 st.json(run.data.params)
     
-                # Liệt kê artifacts
                 artifacts = client.list_artifacts(selected_run_id)
                 if artifacts:
                     st.write("##### Artifacts")
