@@ -12,5 +12,9 @@ matplotlib
 openml
 tensorflow
 pillow
-pandas
 torch
+torchvision
+scipy
+scikit-image
+tqdm
+protobuf
