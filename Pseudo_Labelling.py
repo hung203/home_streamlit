@@ -12,25 +12,17 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-import datetime
 import random
 import cv2
 from matplotlib import patches
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import streamlit as st
-import mlflow
-import mlflow.pytorch
-from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 # Tiêu đề ứng dụng
 st.title("Phân loại chữ số viết tay MNIST với Self-Training Neural Network")
 
 # Tạo các tab
-tab1, tab2, tab3, tab4 = st.tabs(["Lý thuyết", "Huấn luyện", "Dự Đoán", "MLflow"])
+tab1, tab2, tab3, tab4= st.tabs(["Lý thuyết","Huấn luyện", "Dự Đoán", "MLflow"])
 
 # Tab 2: Huấn luyện
 with tab2:
@@ -127,13 +119,17 @@ with tab2:
 
     # Cấu hình huấn luyện Self-Training
     st.header("2. Huấn luyện Neural Network với Self-Training")
-    st.subheader("Cấu hình huấn luyện")
+    # Tiêu đề cho phần tham số Neural Network
+    st.subheader("Tham số mạng Neural Network")
     num_epochs = st.number_input("Số epochs mỗi vòng", min_value=1, max_value=50, value=10)
-    batch_size = st.selectbox("Batch size", [16, 32, 64, 128], index=1)
+    batch_size = st.selectbox("Batch size", [16, 32, 64, 128, 256], index=1)
     learning_rate = st.number_input("Tốc độ học", min_value=0.0001, max_value=0.1, value=0.001, step=0.0001)
-    num_hidden_layers = st.selectbox("Số lớp ẩn", [1, 2, 3], index=0)
-    hidden_neurons = st.selectbox("Số nơ-ron mỗi lớp ẩn", [64, 128, 256], index=1)
+    num_hidden_layers = st.number_input("Số lớp ẩn", min_value=1, max_value=100, value=1)
+    hidden_neurons = st.selectbox("Số nơ-ron mỗi lớp ẩn", [16, 32, 64, 128, 256], index=1)
     activation_function = st.selectbox("Hàm kích hoạt", ["ReLU", "Sigmoid", "Tanh"], index=0)
+
+    # Tiêu đề cho phần tham số Pseudo Labeling
+    st.subheader("Tham số gán nhãn giả (Pseudo Labeling)")
     threshold = st.slider("Ngưỡng gán Pseudo Label", 0.5, 0.99, 0.95, 0.01)
     max_iterations = st.number_input("Số vòng lặp tối đa", min_value=1, max_value=20, value=5)
 
@@ -294,6 +290,9 @@ with tab2:
                 st.session_state.run_id = run.info.run_id
 
                 st.success("Quá trình Self-Training hoàn tất!")
+                st.write("### Kết quả cuối cùng:")
+                st.write(f"- **Độ chính xác trên Validation**: {valid_acc_history[-1]:.4f}")
+                st.write(f"- **Độ chính xác trên Test**: {test_acc_history[-1]:.4f}")
 
                 # Hiển thị biểu đồ tiến trình
                 st.subheader("Tiến trình Self-Training")
@@ -307,8 +306,80 @@ with tab2:
 
 # Các tab khác (giữ nguyên hoặc điều chỉnh nếu cần)
 with tab1:
-    st.header("Lý thuyết")
-    st.write("Nội dung lý thuyết ở đây...")
+    # Tiêu đề chính
+    st.title(":brain: Hiểu Biết về Pseudo-Labeling trong Học Bán Giám Sát")
+
+    # Giới thiệu
+    st.header(":book: 1. Pseudo-Labeling là gì?")
+    st.write("""
+    :information_source: Pseudo-Labeling là một kỹ thuật học bán giám sát nhằm tận dụng dữ liệu không nhãn (unlabeled data) bằng cách:
+    - Sử dụng mô hình được huấn luyện trên dữ liệu có nhãn để dự đoán nhãn cho dữ liệu không nhãn.
+    - Chọn các nhãn dự đoán (pseudo-labels) đủ tự tin (dựa trên ngưỡng) để thêm vào tập dữ liệu có nhãn.
+    - Huấn luyện lại mô hình trên tập dữ liệu mở rộng.
+    """)
+
+    # Lý do sử dụng
+    st.header(":question: 2. Tại sao cần Pseudo-Labeling?")
+    st.write("""
+    :star: **Dữ liệu có nhãn ít**: Thu thập nhãn tốn kém, trong khi dữ liệu không nhãn thường dồi dào.  
+    :star: **Cải thiện hiệu suất**: Tận dụng dữ liệu không nhãn để tăng độ chính xác của mô hình.  
+    :star: **Ứng dụng thực tế**: Ví dụ: phân loại ảnh (như MNIST) khi chỉ có một phần nhỏ dữ liệu được gắn nhãn.
+    """)
+
+    # Quy trình với công thức và giải thích biến
+    st.header(":gear: 3. Quy trình Pseudo-Labeling trong Self-Training")
+    st.write(":memo: Dưới đây là các bước cơ bản của Pseudo-Labeling với công thức minh họa:")
+
+    st.subheader("Bước 1: Chuẩn bị dữ liệu")
+    st.write("Tập Labeled (L): Dữ liệu có nhãn ban đầu:")
+    st.latex(r"L = \{(x_i, y_i)\}_{i=1}^{N_L}")
+    st.write("Tập Unlabeled (U): Dữ liệu không nhãn:")
+    st.latex(r"U = \{x_j\}_{j=1}^{N_U}")
+    
+    st.subheader("Bước 2: Huấn luyện mô hình ban đầu")
+    st.write("Dùng tập \( L \) để huấn luyện mô hình \( f(x; \theta) \):")
+    st.latex(r"\min_{\theta} \sum_{(x_i, y_i) \in L} \text{Loss}(f(x_i; \theta), y_i)")
+    
+    st.subheader("Bước 3: Dự đoán nhãn giả")
+    st.write("Dự đoán trên tập \( U \) bằng \( f(x; \theta) \):")
+    st.latex(r"y_{pseudo,j} = \arg\max_{k} (p_j(k))")
+    
+    st.subheader("Bước 4: Lọc bằng ngưỡng")
+    st.write("Chọn mẫu nếu xác suất tối đa vượt ngưỡng \( \tau \):")
+    st.latex(r"\max_{k} (p_j(k)) \geq \tau")
+    
+    st.subheader("Bước 5: Cập nhật tập dữ liệu")
+    st.write("Thêm mẫu được chọn vào \( L \):")
+    st.latex(r"L = L \cup \{(x_j, y_{pseudo,j})\}")
+    st.write("Loại mẫu khỏi \( U \):")
+    st.latex(r"U = U \setminus \{x_j\}")
+    
+    st.subheader("Bước 6: Lặp lại")
+    st.write("- Huấn luyện lại \( f(x; \theta) \) trên \( L \) mới.")
+    st.write("- Lặp lại từ Bước 3 cho đến khi \( U = \emptyset \) hoặc đạt số vòng lặp tối đa.")
+    
+    # Ưu điểm và Hạn chế
+    st.header(":balance_scale: 4. Ưu điểm và Hạn chế")
+    st.subheader(":thumbsup: Ưu điểm:")
+    st.write("""
+    - :zap: Đơn giản, dễ triển khai.  
+    - :rocket: Tận dụng dữ liệu không nhãn hiệu quả.  
+    - :chart_with_upwards_trend: Cải thiện độ chính xác khi dữ liệu có nhãn ít.
+    """)
+    
+    st.subheader(":thumbsdown: Hạn chế:")
+    st.write("""
+    - :warning: Nhạy cảm với nhiễu: Nhãn giả sai có thể làm giảm chất lượng mô hình.  
+    - :scales: Phụ thuộc ngưỡng: Ngưỡng cao → ít nhãn giả, ngưỡng thấp → nhiều nhãn sai.  
+    - :muscle: Yêu cầu mô hình ban đầu tốt để dự đoán chính xác.
+    """)
+    
+    # Kết luận
+    st.header(":tada: 5. Kết luận")
+    st.write("""
+    :light_bulb: Pseudo-Labeling là một kỹ thuật mạnh mẽ trong học bán giám sát, đặc biệt khi bạn có ít dữ liệu có nhãn. Hiệu quả của nó phụ thuộc vào ngưỡng \( \tau \), chất lượng mô hình ban đầu \( f(x; \theta) \), và cách cấu hình quá trình lặp.
+    """)
+
 
 with tab3:
     # Hàm tiền xử lý ảnh tải lên

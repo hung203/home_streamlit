@@ -296,8 +296,7 @@ with tab2:
         timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         experiment_name = f"{model_choice}_{timestamp}"
     
-    # Nút huấn luyện
-    # Trong phần "Nút huấn luyện" của tab2
+   # Nút huấn luyện
     if st.button("Huấn luyện mô hình"):
         # Kiểm tra xem dữ liệu đã được tải chưa
         if not st.session_state.mnist_loaded:
@@ -308,8 +307,12 @@ with tab2:
             X_valid = st.session_state.X_valid
             y_valid = st.session_state.y_valid
 
-            # Sử dụng st.spinner để hiển thị trạng thái huấn luyện
+            # Sử dụng st.spinner và st.progress để hiển thị trạng thái huấn luyện
             with st.spinner("Đang huấn luyện mô hình..."):
+                # Khởi tạo thanh tiến trình và trạng thái
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+
                 with mlflow.start_run():
                     mlflow.log_param("experiment_name", experiment_name)
                     mlflow.log_param("model", model_choice)
@@ -317,37 +320,57 @@ with tab2:
                     # Với K-means: huấn luyện trên tập train và dự đoán trên tập validation
                     if model_choice == "K-means":
                         mlflow.log_param("n_clusters", n_clusters)
-                        model = KMeans(n_clusters=n_clusters, random_state=42)
+                        status_text.text("Khởi tạo mô hình K-means...")
+                        model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10, verbose=0)
+                        progress_bar.progress(10)  # 10% sau khi khởi tạo
+
+                        # Huấn luyện mô hình
+                        status_text.text("Đang huấn luyện K-means trên tập huấn luyện...")
                         model.fit(X_train_used)
+                        progress_bar.progress(50)  # 50% sau khi hoàn tất huấn luyện (ước lượng)
+
+                        # Dự đoán trên tập validation
+                        status_text.text("Dự đoán trên tập kiểm tra...")
                         y_pred = model.predict(X_valid)
+                        progress_bar.progress(70)  # 70% sau khi dự đoán
+
+                        # Đánh giá mô hình
+                        status_text.text("Đang đánh giá hiệu suất mô hình...")
                         ari = adjusted_rand_score(y_valid, y_pred)
-                        
                         if len(np.unique(y_pred)) > 1:
                             sil_score = silhouette_score(X_valid, y_pred)
                             db_index = davies_bouldin_score(X_valid, y_pred)
                         else:
                             sil_score = -1
                             db_index = -1
-                        
                         nmi = normalized_mutual_info_score(y_valid, y_pred)
+                        progress_bar.progress(100)  # 100% khi hoàn tất đánh giá
                     
                     # Với DBSCAN: huấn luyện trên tập train
                     elif model_choice == "DBSCAN":
                         mlflow.log_param("eps", eps)
                         mlflow.log_param("min_samples", min_samples)
+                        status_text.text("Khởi tạo mô hình DBSCAN...")
                         model = DBSCAN(eps=eps, min_samples=min_samples)
+                        progress_bar.progress(10)  # 10% sau khi khởi tạo
+
+                        # Huấn luyện mô hình
+                        status_text.text("Đang phân cụm dữ liệu với DBSCAN...")
                         model.fit(X_train_used)
+                        progress_bar.progress(60)  # 60% sau khi fit (ước lượng)
+
+                        # Gán nhãn và đánh giá
+                        status_text.text("Đang đánh giá hiệu suất mô hình...")
                         y_pred = model.labels_
                         ari = adjusted_rand_score(y_train_used, y_pred)
-                        
                         if len(np.unique(y_pred)) > 1:
                             sil_score = silhouette_score(X_train_used, y_pred)
                             db_index = davies_bouldin_score(X_valid, y_pred)
                         else:
                             sil_score = -1
                             db_index = -1
-                        
                         nmi = normalized_mutual_info_score(y_train_used, y_pred)
+                        progress_bar.progress(100)  # 100% khi hoàn tất đánh giá
                     
                     # Lưu kết quả và mô hình vào session_state
                     st.session_state.model = model

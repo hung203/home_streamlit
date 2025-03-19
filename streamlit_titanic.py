@@ -1,3 +1,4 @@
+import datetime
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -193,13 +194,17 @@ with tab2:
                 ('poly', poly_features),
                 ('linear', linear_model)
             ])
-
+        experiment_name = st.text_input(
+            "Nhập tên cho thí nghiệm MLflow", 
+            value="",
+            help="Tên để lưu thí nghiệm trong MLflow."
+        )
+        if not experiment_name:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            experiment_name = f"{algorithm}_{timestamp}"
         # Nút bấm để huấn luyện mô hình
         if st.button("Huấn luyện mô hình"):
             # Tạo tên thí nghiệm tự động dựa trên tên mô hình và thời gian hiện tại
-            import datetime
-            timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            experiment_name = f"Experiment_{algorithm}_{timestamp}"
             # Thiết lập tên thí nghiệm cho mlflow (nếu thí nghiệm chưa tồn tại, mlflow sẽ tạo mới)
             mlflow.set_experiment(experiment_name)
              # Lưu tên thí nghiệm vào session_state và hiển thị ra giao diện

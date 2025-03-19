@@ -28,130 +28,95 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # Tab 1: Lý thuyết
+import streamlit as st
+
 with tab1:
-    st.header("Hướng dẫn: Lý thuyết tổng quát về mạng nơ-ron")
+    st.header("Hướng dẫn: Lý thuyết tổng quát về mạng nơ-ron 🧠")
     st.markdown("""
     Mạng nơ-ron nhân tạo (Artificial Neural Networks - ANN) là một mô hình học máy được lấy cảm hứng từ cách hoạt động của não bộ con người. Nó được thiết kế để học hỏi và dự đoán từ dữ liệu thông qua các lớp nơ-ron kết nối với nhau. Dưới đây là các khái niệm và bước hoạt động tổng quát:
     """)
 
     # Phần 1: Cấu trúc cơ bản
     st.markdown("""
-    ### 1. Cấu trúc cơ bản
-    - **Nơ-ron (Neuron)**: Đơn vị tính toán cơ bản, nhận đầu vào, xử lý, và tạo đầu ra.
-    - **Lớp (Layers)**:
-      - **Lớp đầu vào (Input Layer)**: Nhận dữ liệu thô (ví dụ: hình ảnh, số liệu).
-      - **Lớp ẩn (Hidden Layers)**: Xử lý dữ liệu để học các đặc trưng phức tạp.
-      - **Lớp đầu ra (Output Layer)**: Đưa ra kết quả cuối cùng (ví dụ: phân loại, dự đoán số).
-    - **Trọng số (Weights)** và **Bias**: Các tham số điều chỉnh mức độ ảnh hưởng của đầu vào, được cập nhật trong quá trình học.
+    ### 1. Cấu trúc cơ bản 🛠️
+    - **Nơ-ron (Neuron)** ⚙️: Đơn vị tính toán cơ bản, nhận đầu vào, xử lý, và tạo đầu ra.
+    - **Lớp (Layers)** 📚:
+      - **Lớp đầu vào (Input Layer)** 📥: Nhận dữ liệu thô (ví dụ: hình ảnh, số liệu).
+      - **Lớp ẩn (Hidden Layers)** 🕵️: Xử lý dữ liệu để học các đặc trưng phức tạp.
+      - **Lớp đầu ra (Output Layer)** 📤: Đưa ra kết quả cuối cùng (ví dụ: phân loại, dự đoán số).
+    - **Trọng số (Weights)** ⚖️ và **Bias** 🔧: Các tham số điều chỉnh mức độ ảnh hưởng của đầu vào, được cập nhật trong quá trình học.
     """)
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Artificial_neural_network.svg/525px-Artificial_neural_network.svg.png", 
              caption="Cấu trúc cơ bản của mạng nơ-ron: Lớp đầu vào, lớp ẩn, và lớp đầu ra.", width=300)
 
-    # Phần 2: Cách hoạt động (chi tiết từng bước với ảnh mới)
+    # Phần 2: Cách hoạt động
     st.markdown("""
-    ### 2. Cách hoạt động
-    Mạng nơ-ron hoạt động thông qua một chuỗi các bước tuần tự, từ việc nhận dữ liệu, xử lý, dự đoán, đến điều chỉnh để cải thiện. Dưới đây là các bước nguyên lý hoạt động chi tiết:
+    ### 2. Cách hoạt động ⚡
+    Mạng nơ-ron hoạt động thông qua một chuỗi các bước tuần tự, từ việc nhận dữ liệu, xử lý, dự đoán, đến điều chỉnh để cải thiện.
     """)
 
     st.markdown("""
-    #### Bước 1: Nhận và truyền dữ liệu đầu vào
+    #### Bước 1: Nhận và truyền dữ liệu đầu vào 📡
     - Dữ liệu thô (ví dụ: hình ảnh, số liệu) được đưa vào lớp đầu vào.
     - Mỗi nơ-ron trong lớp đầu vào đại diện cho một giá trị của dữ liệu (ví dụ: một pixel trong ảnh).
     - Dữ liệu sau đó được truyền đến lớp ẩn đầu tiên thông qua các kết nối có trọng số.
     """)
-    st.image("https://i.imgur.com/8g6zK9U.png", 
-             caption="Dữ liệu đầu vào được đưa vào lớp đầu tiên.", width=350)
 
     st.markdown("""
-    #### Bước 2: Tính tổng trọng số tại nơ-ron
+    #### Bước 2: Tính tổng trọng số tại nơ-ron ➕
     - Tại mỗi nơ-ron trong lớp ẩn, dữ liệu đầu vào được nhân với trọng số tương ứng và cộng với bias:
-      $$ z = W \\cdot X + b $$
-      - \(W\): Ma trận trọng số (weights).
-      - \(X\): Vector dữ liệu đầu vào (inputs).
-      - \(b\): Giá trị bias (điều chỉnh).
-    - \(z\) là tổng trọng số, đại diện cho giá trị chưa qua xử lý của nơ-ron.
     """)
-    st.image("https://i.imgur.com/5p5gXZm.png", 
-             caption="Tính tổng trọng số tại một nơ-ron.", width=350)
+    st.markdown(r"$$ z = W \cdot X + b $$")
+    st.markdown("""
+    Trong đó:
+    - $ W $: Ma trận trọng số (weights).
+    - $ X $: Vector dữ liệu đầu vào (inputs).
+    - $ b $: Giá trị bias (điều chỉnh).
+    - $ z $: Tổng trọng số, đại diện cho giá trị chưa qua xử lý của nơ-ron.
+    """)
 
     st.markdown("""
-    #### Bước 3: Áp dụng hàm kích hoạt
-    - Tổng trọng số \(z\) được truyền qua một hàm kích hoạt (activation function) để tạo tính phi tuyến:
-      - **ReLU**: \( a = \\max(0, z) \) (chỉ giữ giá trị dương).
-      - **Sigmoid**: \( a = \\frac{1}{1 + e^{-z}} \) (giới hạn đầu ra từ 0 đến 1).
-      - **Tanh**: \( a = \\tanh(z) \) (giới hạn đầu ra từ -1 đến 1).
-    - Đầu ra \(a\) của hàm kích hoạt là giá trị cuối cùng của nơ-ron, được truyền sang lớp tiếp theo.
+    #### Bước 3: Áp dụng hàm kích hoạt 🚀
+    """)
+    st.markdown(r"- **ReLU**: $$ a = \max(0, z) $$ (chỉ giữ giá trị dương) 📈")
+    st.markdown(r"- **Sigmoid**: $$ a = \frac{1}{1 + e^{-z}} $$ (giới hạn đầu ra từ 0 đến 1) 🔢")
+    st.markdown(r"- **Tanh**: $$ a = \tanh(z) $$ (giới hạn đầu ra từ -1 đến 1) 📉")
+    
+    st.markdown("""
+    - Đầu ra $ a $ của hàm kích hoạt là giá trị cuối cùng của nơ-ron, được truyền sang lớp tiếp theo.
     """)
     st.image("https://miro.medium.com/max/1200/1*XxxiA0jJvPrHEJHD4z893g.png", 
              caption="Áp dụng hàm kích hoạt (ReLU, Sigmoid, Tanh).", width=400)
 
     st.markdown("""
-    #### Bước 4: Lan truyền qua các lớp
-    - Đầu ra của lớp trước (sau khi qua hàm kích hoạt) trở thành đầu vào của lớp tiếp theo.
-    - Quá trình tính tổng trọng số và áp dụng hàm kích hoạt lặp lại qua tất cả các lớp ẩn, đến lớp đầu ra.
-    - Lớp đầu ra tạo ra dự đoán cuối cùng của mô hình (ví dụ: xác suất phân loại).
-    """)
-
-    st.markdown("""
-    #### Bước 5: Tính hàm mất mát
+    #### Bước 5: Tính hàm mất mát 📊
     - So sánh dự đoán của mô hình với giá trị thực tế để đo sai số (loss).
     - Ví dụ hàm mất mát:
-      - **Mean Squared Error (MSE)**: \( L = \\frac{1}{n} \\sum (y - \\hat{y})^2 \) (cho hồi quy).
-      - **Cross-Entropy Loss**: \( L = -\\frac{1}{n} \\sum [y \\cdot \\log(\\hat{y})] \) (cho phân loại).
-    - \(y\): Giá trị thực tế, \(\\hat{y}\): Dự đoán.
+    """)
+    st.markdown(r"- **Mean Squared Error (MSE)**: $$ L = \frac{1}{n} \sum (y - \hat{y})^2 $$ (cho hồi quy)")
+    st.markdown(r"- **Cross-Entropy Loss**: $$ L = -\frac{1}{n} \sum [y \cdot \log(\hat{y})] $$ (cho phân loại)")
+    
+    st.markdown("""
+    #### Bước 6: Tính gradient bằng lan truyền ngược 🔄
+    """)
+    st.markdown(r"$$ \frac{\partial L}{\partial W}, \frac{\partial L}{\partial b} $$")
+
+    st.markdown("""
+    #### Bước 7: Cập nhật trọng số 🔧
+    """)
+    st.markdown(r"$$ W = W - \eta \cdot \frac{\partial L}{\partial W} $$")
+    st.markdown(r"$$ b = b - \eta \cdot \frac{\partial L}{\partial b} $$")
+    
+    st.markdown("""
+    Trong đó:
+    - $ \eta $: Tốc độ học (learning rate), quyết định bước cập nhật lớn hay nhỏ.
     """)
 
     st.markdown("""
-    #### Bước 6: Tính gradient bằng lan truyền ngược
-    - Dùng quy tắc chuỗi (chain rule) để tính gradient của hàm mất mát theo từng trọng số và bias:
-      $$ \\frac{\\partial L}{\\partial W}, \\frac{\\partial L}{\\partial b} $$
-    - Gradient chỉ ra hướng và mức độ thay đổi cần thiết để giảm sai số.
-    """)
-
-    st.markdown("""
-    #### Bước 7: Cập nhật trọng số
-    - Sử dụng thuật toán tối ưu (ví dụ: Gradient Descent) để điều chỉnh trọng số và bias:
-      $$ W = W - \\eta \\cdot \\frac{\\partial L}{\\partial W} $$
-      $$ b = b - \\eta \\cdot \\frac{\\partial L}{\\partial b} $$
-    - \(\\eta\): Tốc độ học (learning rate), quyết định bước cập nhật lớn hay nhỏ.
-    """)
-
-    st.markdown("""
-    #### Bước 8: Lặp lại quá trình huấn luyện
+    #### Bước 8: Lặp lại quá trình huấn luyện 🔁
     - Lặp qua toàn bộ dữ liệu nhiều lần (epochs), chia thành các batch nhỏ để cập nhật trọng số dần dần.
     - Sau mỗi lần lặp, mô hình cải thiện khả năng dự đoán bằng cách giảm hàm mất mát.
     """)
-
-    # Phần 3: Vai trò của các thành phần
-    st.markdown("""
-    ### 3. Vai trò của các thành phần
-    - **Hàm kích hoạt**: Tạo tính phi tuyến, giúp mô hình học các đặc trưng phức tạp.
-    - **Tốc độ học (Learning Rate)**: Quyết định bước cập nhật trọng số, ảnh hưởng đến tốc độ và độ ổn định.
-    - **Số lớp và nơ-ron**: Tăng độ phức tạp của mô hình, nhưng cần cân bằng để tránh overfitting hoặc underfitting.
-    """)
-
-    # Phần 4: Ứng dụng
-    st.markdown("""
-    ### 4. Ứng dụng
-    - **Phân loại**: Nhận diện hình ảnh, văn bản (ví dụ: chữ số viết tay).
-    - **Hồi quy**: Dự đoán giá trị liên tục (ví dụ: giá nhà).
-    - **Xử lý ngôn ngữ tự nhiên, thị giác máy tính**: Dùng mạng sâu (Deep Neural Networks).
-    """)
-
-    # Phần 5: Khái niệm quan trọng
-    st.markdown("""
-    ### 5. Một số khái niệm quan trọng
-    - **Overfitting**: Mô hình học quá tốt trên dữ liệu huấn luyện, nhưng kém trên dữ liệu mới.
-    - **Underfitting**: Mô hình không học đủ, dự đoán kém trên cả dữ liệu huấn luyện.
-    - **Regularization**: Kỹ thuật (như Dropout) để giảm overfitting.
-    """)
-
-    # Thêm script MathJax để hiển thị công thức toán học
-    st.markdown("""
-    <script type="text/javascript" async
-      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
-    </script>
-    """, unsafe_allow_html=True)
 
 # Tab Huấn luyện
 with tab2:
@@ -253,11 +218,13 @@ with tab2:
         step=0.0001,
         help="Kiểm soát tốc độ học của mô hình."
     )
-    num_hidden_layers = st.selectbox(
+    num_hidden_layers = st.number_input(
         "Số lớp ẩn", 
-        [1, 2, 3, 4], 
-        index=0,
-        help="Số lượng lớp ẩn trong mạng nơ-ron."
+        min_value=1, 
+        max_value=20,  # Giới hạn tối đa hợp lý, có thể thay đổi
+        value=1, 
+        step=1,
+        help="Số lượng lớp ẩn trong mạng nơ-ron (nhập số bất kỳ từ 1 trở lên)."
     )
     hidden_neurons = st.selectbox(
         "Số nơ-ron mỗi lớp ẩn", 
