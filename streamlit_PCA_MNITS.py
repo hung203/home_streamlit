@@ -3,6 +3,8 @@ import pandas as pd
 import streamlit as st
 import mlflow
 import mlflow.sklearn
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
