@@ -13,3 +13,4 @@ openml
 tensorflow
 pillow
 pandas
+torch
