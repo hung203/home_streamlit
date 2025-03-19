@@ -15,3 +15,5 @@ streamlit-drawable-canvas
 tqdm
 scipy
 scikit-image
+streamlit>=1.31.0
+torch>=2.2.0
