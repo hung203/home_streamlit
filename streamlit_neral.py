@@ -1,6 +1,5 @@
 import datetime
 import random
-from turtle import getcanvas
 import cv2
 from matplotlib import patches
 import numpy as np

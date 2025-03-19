@@ -1,6 +1,8 @@
 import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import streamlit as st
 import mlflow
 import mlflow.pytorch
@@ -12,7 +14,6 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 import datetime
 import random
-from turtle import getcanvas
 import cv2
 from matplotlib import patches
 import numpy as np

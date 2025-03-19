@@ -11,7 +11,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.datasets import fetch_openml
 import datetime
 import plotly.express as px
-
 mlflow.set_tracking_uri("file:./mlruns")
 # ------------------ KHAI BÁO BIẾN TRẠNG THÁI ------------------
 if "mnist_loaded" not in st.session_state:
