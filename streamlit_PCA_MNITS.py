@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import streamlit as st
 import mlflow
@@ -199,25 +200,48 @@ with tab1:
     - Hình ảnh minh họa nhấn mạnh rằng PCA giảm chiều dữ liệu bằng cách giữ các thành phần chính có phương sai lớn nhất.  
     - Các bước trên giả định dữ liệu đã được chuẩn hóa (trung bình = 0, độ lệch chuẩn = 1).
     """)
+    st.header("📌 Lý thuyết về PCA (Phân tích thành phần chính)", divider="blue")
+    # Mô tả ngắn gọn
+    st.header("📌Lý thuyết về t-SNE (t-Distributed Stochastic Neighbor Embedding)", divider="blue")
 
-      
-    # ### Ứng dụng của giảm chiều dữ liệu 💼
+    # Bước 1
+    st.markdown("#### Bước 1: Tính \( p_{j|i} \) trong không gian chiều cao bằng Gaussian và chuẩn hóa")
+    st.write("Sử dụng phân phối Gaussian để đo độ tương tự giữa các điểm dữ liệu trong không gian gốc, sau đó chuẩn hóa để tổng xác suất bằng 1.")
+    # Chèn ảnh ví dụ cho bước 1 (thay 'path_to_image1.jpg' bằng đường dẫn thực tế)
+    st.image('https://miro.medium.com/v2/resize:fit:4800/format:webp/0*pTTqRArwYV_tGnF0.png', caption="https://medium.com/data-science/t-sne-clearly-explained-d84c537f53a")
 
-    # # - **Trực quan hóa dữ liệu:**  
-    # #   Giúp các nhà khoa học dữ liệu và kỹ sư hiểu được cấu trúc nội tại của dữ liệu, nhận diện các mẫu bất thường và phân nhóm dữ liệu.
-    # # - **Tiền xử lý cho học máy:**  
-    # #   Giảm số chiều dữ liệu giúp giảm độ phức tạp của mô hình, tăng hiệu suất tính toán và giảm nguy cơ quá khớp.
-    # # - **Khai phá dữ liệu:**  
-    # #   Phát hiện các mối quan hệ ẩn, hiểu sâu hơn về dữ liệu và đưa ra các quyết định kinh doanh dựa trên dữ liệu.
-    
-    # # ### Lưu ý khi thực hiện giảm chiều dữ liệu ⚠️
-    # # - **Lựa chọn thuật toán:**  
-    # #   Tùy vào đặc điểm của dữ liệu và mục tiêu phân tích mà bạn có thể lựa chọn phương pháp giảm chiều phù hợp (PCA cho dữ liệu tuyến tính, t-SNE cho dữ liệu phi tuyến).
-    # # - **Tinh chỉnh tham số:**  
-    # #   Các tham số như số lượng thành phần trong PCA, perplexity và learning rate trong t-SNE rất quan trọng và cần được thử nghiệm để đạt được kết quả tốt nhất.
-    # # - **Hiểu rõ dữ liệu:**  
-    # #   Phân tích và hiểu rõ dữ liệu ban đầu sẽ giúp việc lựa chọn phương pháp và cấu hình tham số trở nên hiệu quả hơn.
-    # """)
+    # Bước 2
+    st.markdown("#### Bước 2: Khởi tạo ngẫu nhiên các điểm trong không gian chiều thấp")
+    st.write("Tạo các điểm ban đầu trong không gian 2D hoặc 3D một cách ngẫu nhiên để bắt đầu quá trình giảm chiều.")
+    # Chèn ảnh ví dụ cho bước 2
+    st.image('https://miro.medium.com/v2/resize:fit:1100/format:webp/0*sNHrck20Xt7uS7X9.png', caption="https://medium.com/data-science/t-sne-clearly-explained-d84c537f53a")
+
+    # Bước 3
+    st.markdown("#### Bước 3: Tính \( q_{ij} \) trong không gian chiều thấp bằng phân phối Student-t")
+    st.write("Dùng phân phối Student-t với đuôi dài để đo độ tương tự giữa các điểm trong không gian chiều thấp.")
+    # Chèn ảnh ví dụ cho bước 3
+    # st.image('path_to_image3.jpg', caption="Ví dụ minh họa bước 3")
+
+    # Bước 4
+    st.markdown("#### Bước 4: Tối ưu hóa vị trí các điểm bằng gradient descent để giảm KL divergence")
+    st.write("Điều chỉnh vị trí các điểm trong không gian chiều thấp sao cho phân phối \( q_{ij} \) giống \( p_{j|i} \) nhất, sử dụng độ đo Kullback-Leibler.")
+    # Chèn ảnh ví dụ cho bước 4
+    st.image('https://miro.medium.com/v2/resize:fit:1100/format:webp/0*gx5m_CS7gVUn8WLH.gif', caption="https://medium.com/data-science/t-sne-clearly-explained-d84c537f53a")
+
+    # Bước 5
+    st.markdown("#### Bước 5: Áp dụng các kỹ thuật tối ưu (early exaggeration, early compression)")
+    st.write("Sử dụng các kỹ thuật như phóng đại sớm và nén sớm để cải thiện phân tách cụm và tránh chồng chéo.")
+    # Chèn ảnh ví dụ cho bước 5
+    # st.image('path_to_image5.jpg', caption="Ví dụ minh họa bước 5")
+
+    # Bước 6
+    st.markdown("#### Bước 6: Trả về biểu diễn trực quan cuối cùng")
+    st.write("Thu được bản đồ 2D hoặc 3D hiển thị cấu trúc cục bộ của dữ liệu.")
+    # Chèn ảnh ví dụ cho bước 6
+    # st.image('path_to_image6.jpg', caption="Ví dụ minh họa bước 6")
+
+    # Thêm ghi chú
+    st.markdown("**Lưu ý**: t-SNE tập trung vào bảo tồn cấu trúc cục bộ, không phải khoảng cách toàn cục, và thường được dùng để trực quan hóa dữ liệu phức tạp.")
 
 # ----------- Tab 2: Thực hiện giảm chiều -----------
 with tab2:

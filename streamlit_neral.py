@@ -1,5 +1,7 @@
 import datetime
 import random
+from turtle import getcanvas
+import cv2
 from matplotlib import patches
 import numpy as np
 import pandas as pd
@@ -14,14 +16,15 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from PIL import Image
-
+from streamlit_drawable_canvas import st_canvas
 # Tiêu đề ứng dụng
 st.title("Phân loại chữ số viết tay MNIST với Neural_Netwwork")
 
 # Tạo các tab
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "Lý thuyết",
     "Huấn luyện",
+    "Dự Đoán",
     "MLflow"
 ])
 
@@ -42,7 +45,7 @@ with tab1:
       - **Lớp đầu ra (Output Layer)**: Đưa ra kết quả cuối cùng (ví dụ: phân loại, dự đoán số).
     - **Trọng số (Weights)** và **Bias**: Các tham số điều chỉnh mức độ ảnh hưởng của đầu vào, được cập nhật trong quá trình học.
     """)
-    st.image("https://miro.medium.com/max/1200/1*FYiM8SggQTVQz_Hrmz6fOw.png", 
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Artificial_neural_network.svg/525px-Artificial_neural_network.svg.png", 
              caption="Cấu trúc cơ bản của mạng nơ-ron: Lớp đầu vào, lớp ẩn, và lớp đầu ra.", width=300)
 
     # Phần 2: Cách hoạt động (chi tiết từng bước với ảnh mới)
@@ -89,8 +92,6 @@ with tab1:
     - Quá trình tính tổng trọng số và áp dụng hàm kích hoạt lặp lại qua tất cả các lớp ẩn, đến lớp đầu ra.
     - Lớp đầu ra tạo ra dự đoán cuối cùng của mô hình (ví dụ: xác suất phân loại).
     """)
-    st.image("https://i.imgur.com/Z4N3g5M.png", 
-             caption="Lan truyền qua các lớp từ đầu vào đến đầu ra.", width=400)
 
     st.markdown("""
     #### Bước 5: Tính hàm mất mát
@@ -100,8 +101,6 @@ with tab1:
       - **Cross-Entropy Loss**: \( L = -\\frac{1}{n} \\sum [y \\cdot \\log(\\hat{y})] \) (cho phân loại).
     - \(y\): Giá trị thực tế, \(\\hat{y}\): Dự đoán.
     """)
-    st.image("https://i.imgur.com/3XzJ4gq.png", 
-             caption="Tính hàm mất mát để đo sai số.", width=350)
 
     st.markdown("""
     #### Bước 6: Tính gradient bằng lan truyền ngược
@@ -109,8 +108,6 @@ with tab1:
       $$ \\frac{\\partial L}{\\partial W}, \\frac{\\partial L}{\\partial b} $$
     - Gradient chỉ ra hướng và mức độ thay đổi cần thiết để giảm sai số.
     """)
-    st.image("https://i.imgur.com/8Q4f5vR.png", 
-             caption="Lan truyền ngược: Tính gradient để điều chỉnh.", width=400)
 
     st.markdown("""
     #### Bước 7: Cập nhật trọng số
@@ -119,16 +116,12 @@ with tab1:
       $$ b = b - \\eta \\cdot \\frac{\\partial L}{\\partial b} $$
     - \(\\eta\): Tốc độ học (learning rate), quyết định bước cập nhật lớn hay nhỏ.
     """)
-    st.image("https://i.imgur.com/5n5sX7v.png", 
-             caption="Cập nhật trọng số bằng Gradient Descent.", width=350)
 
     st.markdown("""
     #### Bước 8: Lặp lại quá trình huấn luyện
     - Lặp qua toàn bộ dữ liệu nhiều lần (epochs), chia thành các batch nhỏ để cập nhật trọng số dần dần.
     - Sau mỗi lần lặp, mô hình cải thiện khả năng dự đoán bằng cách giảm hàm mất mát.
     """)
-    st.image("https://i.imgur.com/6g6K9vN.png", 
-             caption="Lặp lại quá trình huấn luyện qua nhiều epochs.", width=400)
 
     # Phần 3: Vai trò của các thành phần
     st.markdown("""
@@ -162,7 +155,7 @@ with tab1:
     """, unsafe_allow_html=True)
 
 # Tab Huấn luyện
-with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
+with tab2:
     st.header("1. Chọn kích thước và chia tập dữ liệu")
     
     # Khởi tạo trạng thái dữ liệu
@@ -179,19 +172,18 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
         max_value=st.session_state.total_samples, 
         value=10000, 
         step=1000,
-        help="Số lượng mẫu dữ liệu được lấy từ MNIST (tối đa 70,000). Giá trị lớn hơn sẽ tăng độ chính xác nhưng cần nhiều thời gian huấn luyện hơn."
+        help="Số lượng mẫu dữ liệu được lấy từ MNIST (tối đa 70,000)."
     )
     
-    # Chọn tỷ lệ tập Test và Validation
     test_size = st.slider(
         "Chọn tỷ lệ dữ liệu Test", 
         0.1, 0.5, 0.2, 0.05,
-        help="Tỷ lệ dữ liệu dùng để kiểm tra mô hình (10%-50%). Nên chọn khoảng 20%-30% để đánh giá hiệu quả mà không làm giảm dữ liệu huấn luyện."
+        help="Tỷ lệ dữ liệu dùng để kiểm tra mô hình (10%-50%)."
     )
     valid_size = st.slider(
         "Chọn tỷ lệ dữ liệu Validation từ Train", 
         0.1, 0.3, 0.2, 0.05,
-        help="Tỷ lệ dữ liệu từ tập Train dùng để kiểm tra trong lúc huấn luyện (10%-30%). Giúp điều chỉnh mô hình mà không dùng tập Test."
+        help="Tỷ lệ dữ liệu từ tập Train dùng để kiểm tra trong lúc huấn luyện."
     )
 
     if st.button("Chia tách dữ liệu"):
@@ -201,20 +193,16 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
         if sample_size < st.session_state.total_samples:
             X, _, y, _ = train_test_split(X, y, train_size=sample_size, random_state=42, stratify=y)
         
-        # Lưu dữ liệu gốc vào session_state
         st.session_state.X = X
         st.session_state.y = y
 
-        # Chia dữ liệu thành Train_full và Test
         X_train_full, X_test, y_train_full, y_test = train_test_split(
             st.session_state.X, st.session_state.y, test_size=test_size, random_state=42, stratify=st.session_state.y
         )
-        # Chia Train_full thành Train và Validation
         X_train, X_valid, y_train, y_valid = train_test_split(
             X_train_full, y_train_full, test_size=valid_size, random_state=42, stratify=y_train_full
         )
 
-        # Lưu vào session_state
         st.session_state.X_train = X_train
         st.session_state.X_valid = X_valid
         st.session_state.X_test = X_test
@@ -224,13 +212,11 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
         st.session_state.data_split_done = True
         st.session_state.mnist_loaded = True
 
-        # Hiển thị thông tin sau khi chia tách
         st.write(f"Dữ liệu đã được chia tách với {sample_size} mẫu!")
         st.write(f"- Dữ liệu Train: {st.session_state.X_train.shape} ({(1-test_size)*(1-valid_size)*100:.1f}%)")
         st.write(f"- Dữ liệu Validation: {st.session_state.X_valid.shape} ({(1-test_size)*valid_size*100:.1f}%)")
         st.write(f"- Dữ liệu Test: {st.session_state.X_test.shape} ({test_size*100:.1f}%)")
 
-    # Hiển thị ví dụ hình ảnh
     st.subheader("Ví dụ hình ảnh từ tập Train")
     if st.session_state.get("data_split_done", False):
         X = st.session_state.X_train
@@ -246,21 +232,19 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
 
     # Tab Huấn luyện
     st.header("Huấn luyện Neural Network")
-
-    # Các tham số cơ bản thông dụng cho người dùng lựa chọn
     st.subheader("Cấu hình huấn luyện")
     num_epochs = st.number_input(
         "Số epochs", 
         min_value=1, 
         max_value=50, 
         value=10,
-        help="Số lần mô hình học qua toàn bộ dữ liệu. Tăng giá trị để học tốt hơn, nhưng quá nhiều có thể gây overfitting."
+        help="Số lần mô hình học qua toàn bộ dữ liệu."
     )
     batch_size = st.selectbox(
         "Batch size", 
         [16, 32, 64, 128, 256, 512], 
-        index=1,  # Mặc định 32
-        help="Số mẫu xử lý cùng lúc. Giá trị nhỏ tăng độ chính xác nhưng chậm hơn; giá trị lớn tăng tốc độ nhưng cần bộ nhớ lớn."
+        index=1,
+        help="Số mẫu xử lý cùng lúc."
     )
     learning_rate = st.number_input(
         "Tốc độ học (learning rate)", 
@@ -268,38 +252,40 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
         max_value=0.1, 
         value=0.001, 
         step=0.0001,
-        help="Kiểm soát tốc độ học của mô hình. Giá trị nhỏ học chậm nhưng ổn định; giá trị lớn học nhanh nhưng có thể không hội tụ."
+        help="Kiểm soát tốc độ học của mô hình."
+    )
+    num_hidden_layers = st.selectbox(
+        "Số lớp ẩn", 
+        [1, 2, 3, 4], 
+        index=0,
+        help="Số lượng lớp ẩn trong mạng nơ-ron."
     )
     hidden_neurons = st.selectbox(
-        "Số nơ-ron lớp ẩn", 
+        "Số nơ-ron mỗi lớp ẩn", 
         [32, 64, 128, 256, 512], 
-        index=2,  # Mặc định 128
-        help="Số nơ-ron trong lớp ẩn. Giá trị lớn tăng khả năng học đặc trưng phức tạp, nhưng quá nhiều có thể gây overfitting."
+        index=2,
+        help="Số nơ-ron trong mỗi lớp ẩn."
     )
     activation_function = st.selectbox(
         "Hàm kích hoạt (Activation Function)",
         ["ReLU", "Sigmoid", "Tanh"],
-        index=0,  # Mặc định ReLU
-        help="Hàm biến đổi đầu ra của lớp ẩn. ReLU phổ biến và nhanh; Sigmoid phù hợp với giá trị 0-1; Tanh cân bằng quanh 0."
+        index=0,
+        help="Hàm biến đổi đầu ra của lớp ẩn."
     )
 
-    # Nhập tên cho thí nghiệm MLflow
     experiment_name = st.text_input(
         "Nhập tên cho thí nghiệm MLflow", 
         value="",
-        help="Tên để lưu thí nghiệm trong MLflow. Nếu để trống, hệ thống sẽ tự tạo tên dựa trên thời gian."
+        help="Tên để lưu thí nghiệm trong MLflow."
     )
     if not experiment_name:
         timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         experiment_name = f"Neural_Network_MNIST_{timestamp}"
     
-    # Nút để bắt đầu huấn luyện
     if st.button("Huấn luyện mô hình"):
-        # Kiểm tra dữ liệu đã được chia tách chưa
         if not st.session_state.get("data_split_done", False):
             st.error("Vui lòng chia tách dữ liệu trước!")
         else:
-            # Lấy dữ liệu từ session state
             X_train = st.session_state.X_train
             y_train = st.session_state.y_train
             X_valid = st.session_state.X_valid
@@ -307,7 +293,6 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
             X_test = st.session_state.X_test
             y_test = st.session_state.y_test
 
-            # Chuyển dữ liệu sang tensor
             X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
             y_train_tensor = torch.tensor(y_train, dtype=torch.long)
             X_valid_tensor = torch.tensor(X_valid, dtype=torch.float32)
@@ -315,7 +300,6 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
             X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
             y_test_tensor = torch.tensor(y_test, dtype=torch.long)
 
-            # Tạo DataLoader
             train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
             valid_dataset = TensorDataset(X_valid_tensor, y_valid_tensor)
@@ -323,147 +307,244 @@ with tab2:  # Giữ nguyên 'with tab2:' nếu bạn đang dùng tab
             test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
             test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-            # Định nghĩa mô hình Neural Network với activation tùy chỉnh
+            # Định nghĩa mô hình Neural Network
             class SimpleNN(nn.Module):
-                def __init__(self, hidden_size=hidden_neurons, activation=activation_function):
+                def __init__(self, num_hidden_layers, hidden_size, activation):
                     super(SimpleNN, self).__init__()
-                    self.fc1 = nn.Linear(784, hidden_size)  # Input: 784, Hidden: tùy chỉnh
-                    # Chọn hàm kích hoạt dựa trên lựa chọn của người dùng
+                    layers = [nn.Linear(784, hidden_size)]
                     if activation == "ReLU":
-                        self.activation = nn.ReLU()
+                        layers.append(nn.ReLU())
                     elif activation == "Sigmoid":
-                        self.activation = nn.Sigmoid()
+                        layers.append(nn.Sigmoid())
                     elif activation == "Tanh":
-                        self.activation = nn.Tanh()
-                    self.fc2 = nn.Linear(hidden_size, 10)   # Hidden: tùy chỉnh, Output: 10
+                        layers.append(nn.Tanh())
+                    for _ in range(num_hidden_layers - 1):
+                        layers.append(nn.Linear(hidden_size, hidden_size))
+                        if activation == "ReLU":
+                            layers.append(nn.ReLU())
+                        elif activation == "Sigmoid":
+                            layers.append(nn.Sigmoid())
+                        elif activation == "Tanh":
+                            layers.append(nn.Tanh())
+                    layers.append(nn.Linear(hidden_size, 10))
+                    self.network = nn.Sequential(*layers)
 
                 def forward(self, x):
-                    x = self.fc1(x)
-                    x = self.activation(x)
-                    x = self.fc2(x)
-                    return x
+                    return self.network(x)
 
-            # Khởi tạo mô hình, loss và optimizer
-            model = SimpleNN(hidden_size=hidden_neurons, activation=activation_function)
-            criterion = nn.CrossEntropyLoss()           # Cố định CrossEntropyLoss
-            optimizer = optim.Adam(model.parameters(), lr=learning_rate)  # Cố định Adam
+            model = SimpleNN(num_hidden_layers=num_hidden_layers, hidden_size=hidden_neurons, activation=activation_function)
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
             # Thiết lập MLflow
             mlflow.set_experiment(experiment_name)
-            with mlflow.start_run():
+            with mlflow.start_run() as run:
                 # Log các tham số
                 mlflow.log_param("num_epochs", num_epochs)
                 mlflow.log_param("batch_size", batch_size)
                 mlflow.log_param("learning_rate", learning_rate)
+                mlflow.log_param("num_hidden_layers", num_hidden_layers)
                 mlflow.log_param("hidden_neurons", hidden_neurons)
                 mlflow.log_param("activation_function", activation_function)
                 mlflow.log_param("test_size", test_size)
                 mlflow.log_param("valid_size", valid_size)
+                mlflow.log_param("sample_size", sample_size)
 
-                # Thanh tiến trình và trạng thái
                 progress_bar = st.progress(0)
                 status_text = st.empty()
 
-                # Danh sách để lưu độ chính xác
                 train_acc_history = []
                 valid_acc_history = []
+                test_acc_history = []
 
                 # Huấn luyện mô hình
                 for epoch in range(num_epochs):
                     model.train()
                     correct = 0
                     total = 0
+                    train_loss = 0
                     for inputs, labels in train_loader:
                         optimizer.zero_grad()
                         outputs = model(inputs)
                         loss = criterion(outputs, labels)
                         loss.backward()
                         optimizer.step()
+                        train_loss += loss.item()
                         _, predicted = torch.max(outputs.data, 1)
                         total += labels.size(0)
                         correct += (predicted == labels).sum().item()
                     train_acc = correct / total
+                    train_loss = train_loss / len(train_loader)
                     train_acc_history.append(train_acc)
 
                     # Đánh giá trên tập validation
                     model.eval()
                     correct = 0
                     total = 0
+                    valid_loss = 0
                     with torch.no_grad():
                         for inputs, labels in valid_loader:
                             outputs = model(inputs)
+                            valid_loss += criterion(outputs, labels).item()
                             _, predicted = torch.max(outputs.data, 1)
                             total += labels.size(0)
                             correct += (predicted == labels).sum().item()
                     valid_acc = correct / total
+                    valid_loss = valid_loss / len(valid_loader)
                     valid_acc_history.append(valid_acc)
+
+                    # Đánh giá trên tập test
+                    correct = 0
+                    total = 0
+                    test_loss = 0
+                    with torch.no_grad():
+                        for inputs, labels in test_loader:
+                            outputs = model(inputs)
+                            test_loss += criterion(outputs, labels).item()
+                            _, predicted = torch.max(outputs.data, 1)
+                            total += labels.size(0)
+                            correct += (predicted == labels).sum().item()
+                    test_acc = correct / total
+                    test_loss = test_loss / len(test_loader)
+                    test_acc_history.append(test_acc)
 
                     # Log metrics vào MLflow
                     mlflow.log_metric("train_accuracy", train_acc, step=epoch)
+                    mlflow.log_metric("train_loss", train_loss, step=epoch)
                     mlflow.log_metric("valid_accuracy", valid_acc, step=epoch)
+                    mlflow.log_metric("valid_loss", valid_loss, step=epoch)
+                    mlflow.log_metric("test_accuracy", test_acc, step=epoch)
+                    mlflow.log_metric("test_loss", test_loss, step=epoch)
 
-                    # Cập nhật thanh tiến trình và thông tin
                     progress = (epoch + 1) / num_epochs
                     progress_bar.progress(progress)
-                    status_text.text(f"Epoch {epoch+1}/{num_epochs}, Train Accuracy: {train_acc:.4f}, Validation Accuracy: {valid_acc:.4f}")
+                    status_text.text(f"Epoch {epoch+1}/{num_epochs}, Train Acc: {train_acc:.4f}, Valid Acc: {valid_acc:.4f}, Test Acc: {test_acc:.4f}")
 
-                # Lưu mô hình vào MLflow
+                # Log mô hình vào MLflow
                 mlflow.pytorch.log_model(model, "model")
+                
+                # Lưu mô hình vào session_state để dùng ở các tab khác
+                st.session_state.model = model
+                st.session_state.run_id = run.info.run_id  # Lưu run_id để tham chiếu sau
 
-                # Hiển thị thông báo hoàn tất
-                st.success("Huấn luyện hoàn tất!")
+                st.success("Huấn luyện hoàn tất! Kết quả đã được log vào MLflow.")
 
-                # Vẽ sơ đồ cấu trúc các lớp của mô hình với kích thước tỷ lệ
+                # Sơ đồ cấu trúc mô hình
                 st.subheader("Sơ đồ cấu trúc các lớp của mô hình")
                 fig, ax = plt.subplots(figsize=(12, 5))
-
-                # Định nghĩa kích thước các lớp
-                model_dims = {
-                    "Input Layer": 784,
-                    f"Hidden Layer\n({activation_function})": hidden_neurons,
-                    "Output Layer": 10
-                }
-
-                # Vị trí của các lớp trên trục x
-                x_positions = [0, 3, 5]
-
-                # Tính chiều cao tỷ lệ dựa trên số nơ-ron (log scale để tránh quá chênh lệch)
-                max_height = 2.0  # Chiều cao tối đa của hình chữ nhật
+                model_dims = {"Input Layer": 784}
+                for i in range(num_hidden_layers):
+                    model_dims[f"Hidden Layer {i+1}\n({activation_function})"] = hidden_neurons
+                model_dims["Output Layer"] = 10
+                x_positions = np.linspace(0, 5, num_hidden_layers + 2)
+                max_height = 2.0
                 heights = [min(max_height, max_height * size / 784) for size in model_dims.values()]
-
-                # Vẽ các lớp dưới dạng hình chữ nhật với chiều cao tỷ lệ
                 for i, (layer_name, size) in enumerate(model_dims.items()):
                     rect = patches.Rectangle(
-                        (x_positions[i] - 0.4, -heights[i]/2),  # Vị trí (x, y)
-                        0.8, heights[i],  # Chiều rộng và chiều cao
+                        (x_positions[i] - 0.4, -heights[i]/2), 0.8, heights[i],
                         linewidth=1, edgecolor='black', facecolor='lightblue'
                     )
                     ax.add_patch(rect)
                     ax.text(x_positions[i], heights[i]/2 + 0.2, f"{layer_name}\n{size} nơ-ron", 
                             ha='center', va='bottom', fontsize=12)
-
-                # Vẽ mũi tên kết nối các lớp
                 for i in range(len(x_positions) - 1):
                     ax.arrow(x_positions[i] + 0.4, 0, x_positions[i+1] - x_positions[i] - 0.8, 0, 
                              head_width=0.1, head_length=0.1, fc='black', ec='black')
-
-                # Tùy chỉnh biểu đồ
                 ax.set_xlim(-1, 6)
                 ax.set_ylim(-max_height/2 - 0.5, max_height/2 + 0.8)
-                ax.axis('off')  # Tắt trục để sơ đồ trông gọn gàng
+                ax.axis('off')
                 st.pyplot(fig)
 
-                # Vẽ biểu đồ huấn luyện
+                # Biểu đồ độ chính xác
                 st.subheader("Biểu đồ độ chính xác qua các epoch")
                 fig, ax = plt.subplots()
                 ax.plot(range(1, num_epochs+1), train_acc_history, label='Train Accuracy')
                 ax.plot(range(1, num_epochs+1), valid_acc_history, label='Validation Accuracy')
+                ax.plot(range(1, num_epochs+1), test_acc_history, label='Test Accuracy')
                 ax.set_xlabel('Epoch')
                 ax.set_ylabel('Accuracy')
                 ax.legend()
                 st.pyplot(fig)
-# Tab 3: MLflow
+
+                # Biểu đồ loss
+                st.subheader("Biểu đồ Loss qua các epoch")
+                fig, ax = plt.subplots()
+                ax.plot(range(1, num_epochs+1), [train_acc_history[i] - train_loss for i in range(num_epochs)], label='Train Loss')
+                ax.plot(range(1, num_epochs+1), [valid_acc_history[i] - valid_loss for i in range(num_epochs)], label='Validation Loss')
+                ax.plot(range(1, num_epochs+1), [test_acc_history[i] - test_loss for i in range(num_epochs)], label='Test Loss')
+                ax.set_xlabel('Epoch')
+                ax.set_ylabel('Loss')
+                ax.legend()
+                st.pyplot(fig)
+
 with tab3:
+    # Hàm tiền xử lý ảnh tải lên
+    def preprocess_uploaded_image(image):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = cv2.resize(image, (28, 28))
+        image = image.reshape(1, -1) / 255.0
+        return image
+
+    # Hàm tiền xử lý ảnh từ canvas
+    def preprocess_canvas_image(image_data):
+        image = np.array(image_data)[:, :, 0]  # Lấy kênh grayscale
+        image = cv2.resize(image, (28, 28))
+        image = image.reshape(1, -1) / 255.0
+        return image
+
+    # Kiểm tra mô hình đã huấn luyện chưa
+    if "model" not in st.session_state:
+        st.error("⚠️ Mô hình chưa được huấn luyện! Hãy quay lại tab 'Chia dữ liệu & Huấn luyện' để huấn luyện trước.")
+        st.stop()
+
+    st.header("🖍️ Dự đoán chữ số viết tay")
+    option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
+
+    if option == "📂 Tải ảnh lên":
+        uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
+        if uploaded_file is not None:
+            image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)
+            processed_image = preprocess_uploaded_image(image)
+            st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)
+
+            if st.button("🔮 Dự đoán"):
+                model = st.session_state.model
+                model.eval()
+                with torch.no_grad():
+                    input_tensor = torch.tensor(processed_image, dtype=torch.float32)
+                    outputs = model(input_tensor)
+                    probabilities = torch.softmax(outputs, dim=1).numpy()[0]
+                    prediction = np.argmax(probabilities)
+                    st.write(f"🎯 **Dự đoán: {prediction}**")
+                    st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+
+    elif option == "✏️ Vẽ số":
+        # Sử dụng st_canvas với các tham số hợp lệ
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 255, 255, 0.0)",  # Màu tô (trong suốt để không tô nền)
+            stroke_width=15,                        # Độ dày nét vẽ
+            stroke_color="black",                   # Màu nét vẽ
+            background_color="white",               # Màu nền canvas
+            width=280,                              # Chiều rộng
+            height=280,                             # Chiều cao
+            drawing_mode="freedraw",                # Chế độ vẽ tự do
+            key="canvas"                            # Khóa duy nhất
+        )
+        if st.button("🔮 Dự đoán"):
+            if canvas_result.image_data is not None:
+                processed_canvas = preprocess_canvas_image(canvas_result.image_data)
+                model = st.session_state.model
+                model.eval()
+                with torch.no_grad():
+                    input_tensor = torch.tensor(processed_canvas, dtype=torch.float32)
+                    outputs = model(input_tensor)
+                    probabilities = torch.softmax(outputs, dim=1).numpy()[0]
+                    prediction = np.argmax(probabilities)
+                    st.write(f"🎯 **Dự đoán: {prediction}**")
+                    st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+
+# Tab 3: MLflow
+with tab4:
     st.header("Tracking MLflow")
     try:
         from mlflow.tracking import MlflowClient

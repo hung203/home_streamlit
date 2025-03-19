@@ -8,7 +8,7 @@ if 'last_option' not in st.session_state:
 # Tạo selectbox để chọn dự án
 option = st.sidebar.selectbox(
     "📌 Chọn một dự án để thực hiện:",
-    ["Phân tích Titanic", "Classification MNIST", "Clustering Algorithms MNIST", "PCA & t-SNE","Neural network"]
+    ["Phân tích Titanic", "Classification MNIST", "Clustering Algorithms MNIST", "PCA & t-SNE","Neural network", "Pseudo_Labelling"]
 )
 
 # Kiểm tra nếu option thay đổi
@@ -40,5 +40,9 @@ elif option == "PCA & t-SNE":
         exec(code)
 elif option == "Neural network":
     with open("streamlit_neral.py", "r", encoding="utf-8") as file:
+        code = file.read()
+        exec(code)
+elif option == "Pseudo_Labelling":
+    with open("Pseudo_Labelling.py", "r", encoding="utf-8") as file:
         code = file.read()
         exec(code)
