@@ -9,7 +9,6 @@ openml
 torch
 torchvision
 mlflow
-mlflow[extras]
 opencv-python-headless
 pillow
 streamlit-drawable-canvas
