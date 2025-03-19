@@ -15,4 +15,3 @@ streamlit-drawable-canvas
 tqdm
 scipy
 scikit-image
-
