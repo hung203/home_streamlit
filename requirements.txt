@@ -6,7 +6,7 @@ seaborn
 plotly
 scikit-learn
 openml
-torch==2.1.0  # Hoặc phiên bản phù hợp với mô hình của bạn
+torch==2.1.0
 torchvision==0.16.0
 mlflow
 opencv-python-headless
