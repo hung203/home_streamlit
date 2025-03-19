@@ -13,7 +13,6 @@ mlflow[extras]
 opencv-python-headless
 pillow
 streamlit-drawable-canvas
-datetime
 tqdm
 scipy
 scikit-image
