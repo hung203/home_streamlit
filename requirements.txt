@@ -15,5 +15,4 @@ streamlit-drawable-canvas
 tqdm
 scipy
 scikit-image
-torch==2.1.0  # Hoặc phiên bản phù hợp với mô hình của bạn
-torchvision==0.16.0
+
