@@ -19,26 +19,21 @@ import pandas as pd
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 
-# Tiêu đề ứng dụng
-st.title("Phân loại chữ số viết tay MNIST với Self-Training Neural Network")
-
-# Tạo các tab
-tab1, tab2, tab3, tab4 = st.tabs(["Lý thuyết", "Huấn luyện", "Dự Đoán", "MLflow"])
-
-# Hàm tải dữ liệu với caching
+# Thêm caching cho việc tải dữ liệu
 @st.cache_data
 def fetch_mnist_data(sample_size):
-    mnist = fetch_openml('mnist_784', version=1, as_frame=False)
+    mnist = fetch_openml('mnist_784', version=1, as_frame=False, cache=True)
     X, y = mnist.data / 255.0, mnist.target.astype(int)
-    if sample_size < mnist.data.shape[0]:
-        X, _, y, _ = train_test_split(X, y, train_size=sample_size / mnist.data.shape[0], random_state=42, stratify=y)
+    total_samples = mnist.data.shape[0]
+    if sample_size < total_samples:
+        X, _, y, _ = train_test_split(X, y, train_size=sample_size / total_samples, random_state=42, stratify=y)
     return mnist, X, y
 
-# Hàm định nghĩa mô hình với caching
+# Thêm caching cho mô hình
 @st.cache_resource
 def create_simple_nn(num_hidden_layers, hidden_size, activation):
     class SimpleNN(nn.Module):
-        def __init__(self):
+        def __init__(self, num_hidden_layers, hidden_size, activation):
             super(SimpleNN, self).__init__()
             layers = [nn.Linear(784, hidden_size)]
             if activation == "ReLU":
@@ -60,7 +55,13 @@ def create_simple_nn(num_hidden_layers, hidden_size, activation):
 
         def forward(self, x):
             return self.network(x)
-    return SimpleNN()
+    return SimpleNN(num_hidden_layers, hidden_size, activation)
+
+# Tiêu đề ứng dụng
+st.title("Phân loại chữ số viết tay MNIST với Self-Training Neural Network")
+
+# Tạo các tab
+tab1, tab2, tab3, tab4 = st.tabs(["Lý thuyết", "Huấn luyện", "Dự Đoán", "MLflow"])
 
 # Tab 2: Huấn luyện
 with tab2:
@@ -68,7 +69,7 @@ with tab2:
 
     # Khởi tạo trạng thái dữ liệu
     if "mnist_loaded" not in st.session_state:
-        mnist, X, y = fetch_mnist_data(10000)  # Giá trị mặc định để khởi tạo
+        mnist, X, y = fetch_mnist_data(10000)  # Giá trị mặc định
         st.session_state.total_samples = mnist.data.shape[0]
         st.session_state.mnist_data = mnist
         st.session_state.mnist_loaded = False
@@ -95,7 +96,7 @@ with tab2:
     )
 
     if st.button("Chia tách dữ liệu"):
-        mnist, X, y = fetch_mnist_data(sample_size)  # Sử dụng hàm đã cache
+        mnist, X, y = fetch_mnist_data(sample_size)  # Sử dụng hàm cached
         st.session_state.mnist_data = mnist
         st.session_state.X = X
         st.session_state.y = y
@@ -153,7 +154,6 @@ with tab2:
 
     # Cấu hình huấn luyện Self-Training
     st.header("2. Huấn luyện Neural Network với Self-Training")
-    # Tiêu đề cho phần tham số Neural Network
     st.subheader("Tham số mạng Neural Network")
     num_epochs = st.number_input("Số epochs mỗi vòng", min_value=1, max_value=50, value=10)
     batch_size = st.selectbox("Batch size", [16, 32, 64, 128, 256], index=1)
@@ -162,7 +162,6 @@ with tab2:
     hidden_neurons = st.selectbox("Số nơ-ron mỗi lớp ẩn", [16, 32, 64, 128, 256], index=1)
     activation_function = st.selectbox("Hàm kích hoạt", ["ReLU", "Sigmoid", "Tanh"], index=0)
 
-    # Tiêu đề cho phần tham số Pseudo Labeling
     st.subheader("Tham số gán nhãn giả (Pseudo Labeling)")
     threshold = st.slider("Ngưỡng gán Pseudo Label", 0.5, 0.99, 0.95, 0.01)
     max_iterations = st.number_input("Số vòng lặp tối đa", min_value=1, max_value=20, value=5)
@@ -317,19 +316,17 @@ with tab2:
 
                 # Hiển thị 10 mẫu ví dụ từ tập Test sau khi huấn luyện
                 st.subheader("10 mẫu ví dụ từ tập Test với dự đoán")
-                num_examples = 10  # Số lượng mẫu muốn hiển thị
+                num_examples = 10
                 random_indices = np.random.choice(len(X_test), num_examples, replace=False)
                 X_samples = X_test[random_indices]
                 y_true = y_test[random_indices]
 
-                # Dự đoán nhãn bằng mô hình đã huấn luyện
                 model.eval()
                 X_samples_tensor = torch.tensor(X_samples, dtype=torch.float32)
                 with torch.no_grad():
                     outputs = model(X_samples_tensor)
                     y_pred = torch.argmax(outputs, dim=1).numpy()
 
-                # Tạo figure để hiển thị các mẫu (2 hàng, mỗi hàng 5 mẫu)
                 fig, axes = plt.subplots(2, 5, figsize=(10, 4))
                 for i, (sample, true_label, pred_label) in enumerate(zip(X_samples, y_true, y_pred)):
                     row = i // 5
@@ -344,6 +341,7 @@ with tab2:
 # Tab 1: Lý thuyết
 with tab1:
     st.title(":brain: Hiểu Biết về Pseudo-Labeling trong Học Bán Giám Sát")
+
     st.header(":book: 1. Pseudo-Labeling là gì?")
     st.write("""
     :information_source: Pseudo-Labeling là một kỹ thuật học bán giám sát nhằm tận dụng dữ liệu không nhãn (unlabeled data) bằng cách:
