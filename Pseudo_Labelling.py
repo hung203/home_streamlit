@@ -411,8 +411,8 @@ with tab3:
             canvas_result = st_canvas(
                 fill_color="rgba(255, 255, 255, 0.0)",
                 stroke_width=15,
-                stroke_color="black",
-                background_color="white",
+                stroke_color="white",
+                background_color="black",
                 width=280,
                 height=280,
                 drawing_mode="freedraw",
