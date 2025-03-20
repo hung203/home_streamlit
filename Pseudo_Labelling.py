@@ -138,7 +138,9 @@ with tab2:
 
     # Khởi tạo trạng thái dữ liệu
     if "mnist_loaded" not in st.session_state:
-        st.session_state.total_samples = 70000  # MNIST có 70,000 mẫu
+        mnist = fetch_openml('mnist_784', version=1, as_frame=False)
+        st.session_state.total_samples = mnist.data.shape[0]
+        st.session_state.mnist_data = mnist
         st.session_state.mnist_loaded = False
         st.session_state.data_split_done = False
 
@@ -163,18 +165,26 @@ with tab2:
     )
 
     if st.button("Chia tách dữ liệu"):
-        X, y = load_mnist(sample_size)
+        mnist = st.session_state.mnist_data
+        X, y = mnist.data / 255.0, mnist.target.astype(int)
+
+        if sample_size < st.session_state.total_samples:
+            X, _, y, _ = train_test_split(X, y, train_size=sample_size / st.session_state.total_samples, random_state=42, stratify=y)
+
         st.session_state.X = X
         st.session_state.y = y
 
+        # Chia tập Train và Test
         X_train_full, X_test, y_train_full, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=42, stratify=y
+            st.session_state.X, st.session_state.y, test_size=test_size, random_state=42, stratify=st.session_state.y
         )
 
+        # Chia tập Train thành Train và Validation
         X_train, X_valid, y_train, y_valid = train_test_split(
             X_train_full, y_train_full, test_size=valid_size, random_state=42, stratify=y_train_full
         )
 
+        # Từ tập Train, lấy 1% mỗi lớp làm tập labeled ban đầu
         X_labeled = []
         y_labeled = []
         X_unlabeled = []
@@ -182,7 +192,7 @@ with tab2:
         for digit in range(10):
             digit_indices = np.where(y_train == digit)[0]
             num_samples = len(digit_indices)
-            num_labeled = max(1, int(num_samples * 0.01))
+            num_labeled = max(1, int(num_samples * 0.01))  # Lấy 1%, đảm bảo ít nhất 1 mẫu
             labeled_indices = np.random.choice(digit_indices, num_labeled, replace=False)
             unlabeled_indices = np.setdiff1d(digit_indices, labeled_indices)
 
@@ -194,8 +204,9 @@ with tab2:
         X_labeled = np.concatenate(X_labeled)
         y_labeled = np.concatenate(y_labeled)
         X_unlabeled = np.concatenate(X_unlabeled)
-        y_unlabeled = np.concatenate(y_unlabeled)
+        y_unlabeled = np.concatenate(y_unlabeled)  # Ground truth cho đánh giá
 
+        # Lưu vào session_state
         st.session_state.X_train_labeled = X_labeled
         st.session_state.y_train_labeled = y_labeled
         st.session_state.X_train_unlabeled = X_unlabeled
@@ -214,7 +225,9 @@ with tab2:
         st.write(f"- Dữ liệu Validation: {X_valid.shape} ({(1 - test_size) * valid_size * 100:.1f}%)")
         st.write(f"- Dữ liệu Test: {X_test.shape} ({test_size * 100:.1f}%)")
 
+    # Cấu hình huấn luyện Self-Training
     st.header("2. Huấn luyện Neural Network với Self-Training")
+    # Tiêu đề cho phần tham số Neural Network
     st.subheader("Tham số mạng Neural Network")
     num_epochs = st.number_input("Số epochs mỗi vòng", min_value=1, max_value=50, value=10)
     batch_size = st.selectbox("Batch size", [16, 32, 64, 128, 256], index=1)
@@ -223,6 +236,7 @@ with tab2:
     hidden_neurons = st.selectbox("Số nơ-ron mỗi lớp ẩn", [16, 32, 64, 128, 256], index=1)
     activation_function = st.selectbox("Hàm kích hoạt", ["ReLU", "Sigmoid", "Tanh"], index=0)
 
+    # Tiêu đề cho phần tham số Pseudo Labeling
     st.subheader("Tham số gán nhãn giả (Pseudo Labeling)")
     threshold = st.slider("Ngưỡng gán Pseudo Label", 0.5, 0.99, 0.95, 0.01)
     max_iterations = st.number_input("Số vòng lặp tối đa", min_value=1, max_value=20, value=5)
@@ -232,23 +246,48 @@ with tab2:
         value=f"Self_Training_MNIST_{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
     )
 
-    # Fragment cho quá trình Self-Training
-    @st.fragment
-    def run_self_training():
+    if st.button("Bắt đầu Self-Training"):
         if not st.session_state.get("data_split_done", False):
             st.error("Vui lòng chia tách dữ liệu trước!")
         else:
             X_labeled = st.session_state.X_train_labeled
             y_labeled = st.session_state.y_train_labeled
             X_unlabeled = st.session_state.X_train_unlabeled
-            y_unlabeled = st.session_state.y_train_unlabeled
+            y_unlabeled = st.session_state.y_train_unlabeled  # Ground truth
             X_valid = st.session_state.X_valid
             y_valid = st.session_state.y_valid
             X_test = st.session_state.X_test
             y_test = st.session_state.y_test
 
+            # Định nghĩa mô hình Neural Network
+            class SimpleNN(nn.Module):
+                def __init__(self, num_hidden_layers, hidden_size, activation):
+                    super(SimpleNN, self).__init__()
+                    layers = [nn.Linear(784, hidden_size)]
+                    if activation == "ReLU":
+                        layers.append(nn.ReLU())
+                    elif activation == "Sigmoid":
+                        layers.append(nn.Sigmoid())
+                    elif activation == "Tanh":
+                        layers.append(nn.Tanh())
+                    for _ in range(num_hidden_layers - 1):
+                        layers.append(nn.Linear(hidden_size, hidden_size))
+                        if activation == "ReLU":
+                            layers.append(nn.ReLU())
+                        elif activation == "Sigmoid":
+                            layers.append(nn.Sigmoid())
+                        elif activation == "Tanh":
+                            layers.append(nn.Tanh())
+                    layers.append(nn.Linear(hidden_size, 10))
+                    self.network = nn.Sequential(*layers)
+
+                def forward(self, x):
+                    return self.network(x)
+
+            # Thiết lập MLflow
             mlflow.set_experiment(experiment_name)
             with mlflow.start_run() as run:
+                # Log các tham số
                 mlflow.log_param("num_epochs", num_epochs)
                 mlflow.log_param("batch_size", batch_size)
                 mlflow.log_param("learning_rate", learning_rate)
@@ -266,8 +305,10 @@ with tab2:
                 test_acc_history = []
                 valid_acc_history = []
 
+                # Vòng lặp Self-Training
                 for iteration in range(max_iterations):
-                    model = create_model(num_hidden_layers, hidden_neurons, activation_function)
+                    # (2) Huấn luyện mô hình trên tập labeled
+                    model = SimpleNN(num_hidden_layers, hidden_neurons, activation_function)
                     criterion = nn.CrossEntropyLoss()
                     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -285,6 +326,7 @@ with tab2:
                             loss.backward()
                             optimizer.step()
 
+                    # (3) Dự đoán nhãn cho tập unlabeled
                     model.eval()
                     X_unlabeled_tensor = torch.tensor(X_unlabeled, dtype=torch.float32)
                     with torch.no_grad():
@@ -293,14 +335,17 @@ with tab2:
                         predictions = np.argmax(probabilities, axis=1)
                         max_probs = np.max(probabilities, axis=1)
 
+                    # (4) Gán Pseudo Label với ngưỡng
                     pseudo_mask = max_probs >= threshold
                     X_pseudo = X_unlabeled[pseudo_mask]
                     y_pseudo = predictions[pseudo_mask]
 
+                    # (5) Cập nhật tập labeled
                     X_labeled = np.concatenate([X_labeled, X_pseudo])
                     y_labeled = np.concatenate([y_labeled, y_pseudo])
                     X_unlabeled = X_unlabeled[~pseudo_mask]
 
+                    # Đánh giá trên tập Validation
                     X_valid_tensor = torch.tensor(X_valid, dtype=torch.float32)
                     y_valid_tensor = torch.tensor(y_valid, dtype=torch.long)
                     valid_dataset = TensorDataset(X_valid_tensor, y_valid_tensor)
@@ -316,6 +361,7 @@ with tab2:
                     valid_acc = correct / total
                     valid_acc_history.append(valid_acc)
 
+                    # Đánh giá trên tập Test
                     X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
                     y_test_tensor = torch.tensor(y_test, dtype=torch.long)
                     test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
@@ -331,6 +377,7 @@ with tab2:
                     test_acc = correct / total
                     test_acc_history.append(test_acc)
 
+                    # Log kết quả
                     mlflow.log_metric("labeled_size", len(X_labeled), step=iteration)
                     mlflow.log_metric("unlabeled_size", len(X_unlabeled), step=iteration)
                     mlflow.log_metric("valid_accuracy", valid_acc, step=iteration)
@@ -340,10 +387,12 @@ with tab2:
                     progress_bar.progress(progress)
                     status_text.text(f"Iteration {iteration+1}/{max_iterations}, Labeled: {len(X_labeled)}, Valid Acc: {valid_acc:.4f}, Test Acc: {test_acc:.4f}")
 
+                    # Dừng nếu không còn dữ liệu unlabeled
                     if len(X_unlabeled) == 0:
                         st.write("Đã gán nhãn hết dữ liệu không nhãn!")
                         break
 
+                # Lưu mô hình
                 mlflow.pytorch.log_model(model, "model")
                 st.session_state.model = model
                 st.session_state.run_id = run.info.run_id
@@ -353,6 +402,7 @@ with tab2:
                 st.write(f"- **Độ chính xác trên Validation**: {valid_acc_history[-1]:.4f}")
                 st.write(f"- **Độ chính xác trên Test**: {test_acc_history[-1]:.4f}")
 
+                # Hiển thị biểu đồ tiến trình
                 st.subheader("Tiến trình Self-Training")
                 fig, ax = plt.subplots()
                 ax.plot(range(1, len(test_acc_history) + 1), test_acc_history, label="Test Accuracy")
@@ -360,6 +410,32 @@ with tab2:
                 ax.set_xlabel("Iteration")
                 ax.set_ylabel("Accuracy")
                 ax.legend()
+                st.pyplot(fig)
+
+                # Hiển thị 10 mẫu ví dụ từ tập Test sau khi huấn luyện
+                st.subheader("10 mẫu ví dụ từ tập Test với dự đoán")
+                num_examples = 10  # Số lượng mẫu muốn hiển thị
+                random_indices = np.random.choice(len(X_test), num_examples, replace=False)
+                X_samples = X_test[random_indices]
+                y_true = y_test[random_indices]
+
+                # Dự đoán nhãn bằng mô hình đã huấn luyện
+                model.eval()
+                X_samples_tensor = torch.tensor(X_samples, dtype=torch.float32)
+                with torch.no_grad():
+                    outputs = model(X_samples_tensor)
+                    y_pred = torch.argmax(outputs, dim=1).numpy()
+
+                # Tạo figure để hiển thị các mẫu (2 hàng, mỗi hàng 5 mẫu)
+                fig, axes = plt.subplots(2, 5, figsize=(10, 4))
+                for i, (sample, true_label, pred_label) in enumerate(zip(X_samples, y_true, y_pred)):
+                    row = i // 5
+                    col = i % 5
+                    image = sample.reshape(28, 28)
+                    axes[row, col].imshow(image, cmap='gray')
+                    axes[row, col].set_title(f"Thực: {true_label}\nDự đoán: {pred_label}")
+                    axes[row, col].axis('off')
+                plt.tight_layout()
                 st.pyplot(fig)
 
     if st.button("Bắt đầu Self-Training"):
