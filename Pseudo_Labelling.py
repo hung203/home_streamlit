@@ -268,80 +268,19 @@ with tab2:
 
 # Tab 1: Lý thuyết (giữ nguyên nội dung, tối ưu định dạng)
 with tab1:
-    # Tiêu đề chính
-    st.title(":brain: Hiểu Biết về Pseudo-Labeling trong Học Bán Giám Sát")
+    st.title("Hiểu Biết về Pseudo-Labeling")
+    st.header("1. Pseudo-Labeling là gì?")
+    st.write("Pseudo-Labeling là kỹ thuật học bán giám sát tận dụng dữ liệu không nhãn bằng cách dự đoán nhãn giả và thêm vào tập có nhãn.")
 
-    # Giới thiệu
-    st.header(":book: 1. Pseudo-Labeling là gì?")
-    st.write("""
-    :information_source: Pseudo-Labeling là một kỹ thuật học bán giám sát nhằm tận dụng dữ liệu không nhãn (unlabeled data) bằng cách:
-    - Sử dụng mô hình được huấn luyện trên dữ liệu có nhãn để dự đoán nhãn cho dữ liệu không nhãn.
-    - Chọn các nhãn dự đoán (pseudo-labels) đủ tự tin (dựa trên ngưỡng) để thêm vào tập dữ liệu có nhãn.
-    - Huấn luyện lại mô hình trên tập dữ liệu mở rộng.
-    """)
+    st.header("2. Tại sao cần Pseudo-Labeling?")
+    st.write("- Ít dữ liệu có nhãn.\n- Cải thiện hiệu suất.\n- Ứng dụng thực tế như phân loại MNIST.")
 
-    # Lý do sử dụng
-    st.header(":question: 2. Tại sao cần Pseudo-Labeling?")
-    st.write("""
-    :star: **Dữ liệu có nhãn ít**: Thu thập nhãn tốn kém, trong khi dữ liệu không nhãn thường dồi dào.  
-    :star: **Cải thiện hiệu suất**: Tận dụng dữ liệu không nhãn để tăng độ chính xác của mô hình.  
-    :star: **Ứng dụng thực tế**: Ví dụ: phân loại ảnh (như MNIST) khi chỉ có một phần nhỏ dữ liệu được gắn nhãn.
-    """)
+    st.header("3. Quy trình Pseudo-Labeling")
+    st.latex(r"L = \{(x_i, y_i)\}, U = \{x_j\}")
+    st.write("1. Huấn luyện trên \(L\).\n2. Dự đoán nhãn giả trên \(U\).\n3. Lọc bằng ngưỡng.\n4. Cập nhật \(L\) và \(U\).\n5. Lặp lại.")
 
-    # Quy trình với công thức và giải thích biến
-    st.header(":gear: 3. Quy trình Pseudo-Labeling trong Self-Training")
-    st.write(":memo: Dưới đây là các bước cơ bản của Pseudo-Labeling với công thức minh họa:")
-
-    st.subheader("Bước 1: Chuẩn bị dữ liệu")
-    st.write("Tập Labeled (L): Dữ liệu có nhãn ban đầu:")
-    st.latex(r"L = \{(x_i, y_i)\}_{i=1}^{N_L}")
-    st.write("Tập Unlabeled (U): Dữ liệu không nhãn:")
-    st.latex(r"U = \{x_j\}_{j=1}^{N_U}")
-    
-    st.subheader("Bước 2: Huấn luyện mô hình ban đầu")
-    st.write("Dùng tập \( L \) để huấn luyện mô hình \( f(x; \theta) \):")
-    st.latex(r"\min_{\theta} \sum_{(x_i, y_i) \in L} \text{Loss}(f(x_i; \theta), y_i)")
-    
-    st.subheader("Bước 3: Dự đoán nhãn giả")
-    st.write("Dự đoán trên tập \( U \) bằng \( f(x; \theta) \):")
-    st.latex(r"y_{pseudo,j} = \arg\max_{k} (p_j(k))")
-    
-    st.subheader("Bước 4: Lọc bằng ngưỡng")
-    st.write("Chọn mẫu nếu xác suất tối đa vượt ngưỡng \( \tau \):")
-    st.latex(r"\max_{k} (p_j(k)) \geq \tau")
-    
-    st.subheader("Bước 5: Cập nhật tập dữ liệu")
-    st.write("Thêm mẫu được chọn vào \( L \):")
-    st.latex(r"L = L \cup \{(x_j, y_{pseudo,j})\}")
-    st.write("Loại mẫu khỏi \( U \):")
-    st.latex(r"U = U \setminus \{x_j\}")
-    
-    st.subheader("Bước 6: Lặp lại")
-    st.write("- Huấn luyện lại \( f(x; \theta) \) trên \( L \) mới.")
-    st.write("- Lặp lại từ Bước 3 cho đến khi \( U = \emptyset \) hoặc đạt số vòng lặp tối đa.")
-    
-    # Ưu điểm và Hạn chế
-    st.header(" 4. Ưu điểm và Hạn chế")
-    st.subheader(":thumbsup: Ưu điểm:")
-    st.write("""
-    - :zap: Đơn giản, dễ triển khai.  
-    - :rocket: Tận dụng dữ liệu không nhãn hiệu quả.  
-    - :chart_with_upwards_trend: Cải thiện độ chính xác khi dữ liệu có nhãn ít.
-    """)
-    
-    st.subheader(":thumbsdown: Hạn chế:")
-    st.write("""
-    - :warning: Nhạy cảm với nhiễu: Nhãn giả sai có thể làm giảm chất lượng mô hình.  
-    - :scales: Phụ thuộc ngưỡng: Ngưỡng cao → ít nhãn giả, ngưỡng thấp → nhiều nhãn sai.  
-    - :muscle: Yêu cầu mô hình ban đầu tốt để dự đoán chính xác.
-    """)
-    
-    # Kết luận
-    st.header(":tada: 5. Kết luận")
-    st.write("""
-    :light_bulb: Pseudo-Labeling là một kỹ thuật mạnh mẽ trong học bán giám sát, đặc biệt khi bạn có ít dữ liệu có nhãn. Hiệu quả của nó phụ thuộc vào ngưỡng \( \tau \), chất lượng mô hình ban đầu \( f(x; \theta) \), và cách cấu hình quá trình lặp.
-    """)
-
+    st.header("4. Ưu điểm và Hạn chế")
+    st.write("**Ưu điểm**: Đơn giản, hiệu quả.\n**Hạn chế**: Nhạy với nhiễu, phụ thuộc ngưỡng.")
 
 # Tab 3: Dự đoán
 with tab3:
