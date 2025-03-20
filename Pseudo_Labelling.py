@@ -24,14 +24,17 @@ st.title("Phân loại chữ số viết tay MNIST với Self-Training Neural Ne
 # Tạo các tab
 tab1, tab2, tab3, tab4 = st.tabs(["Lý thuyết", "Huấn luyện", "Dự Đoán", "MLflow"])
 
-# Hàm tải dữ liệu MNIST với cache
+# Hàm tải dữ liệu MNIST với @st.cache_data
 @st.cache_data
 def load_mnist_data():
+    """Tải dữ liệu MNIST và lưu vào cache."""
     mnist = fetch_openml('mnist_784', version=1, as_frame=False)
     return mnist
 
-# Hàm chia dữ liệu
+# Hàm chia dữ liệu với @st.cache_data
+@st.cache_data
 def split_data(mnist, sample_size, test_size, valid_size):
+    """Chia dữ liệu thành các tập labeled, unlabeled, validation, test."""
     X, y = mnist.data / 255.0, mnist.target.astype(int)
     if sample_size < mnist.data.shape[0]:
         X, _, y, _ = train_test_split(X, y, train_size=sample_size / mnist.data.shape[0], 
@@ -60,21 +63,25 @@ def split_data(mnist, sample_size, test_size, valid_size):
             np.concatenate(X_unlabeled), np.concatenate(y_unlabeled),
             X_valid, y_valid, X_test, y_test)
 
-# Định nghĩa mô hình Neural Network
-class SimpleNN(nn.Module):
-    def __init__(self, num_hidden_layers, hidden_size, activation):
-        super(SimpleNN, self).__init__()
-        layers = [nn.Linear(784, hidden_size)]
-        activation_fn = {"ReLU": nn.ReLU(), "Sigmoid": nn.Sigmoid(), "Tanh": nn.Tanh()}[activation]
-        layers.append(activation_fn)
-        for _ in range(num_hidden_layers - 1):
-            layers.append(nn.Linear(hidden_size, hidden_size))
+# Định nghĩa mô hình Neural Network với @st.cache_resource
+@st.cache_resource
+def create_model(num_hidden_layers, hidden_size, activation):
+    """Khởi tạo mô hình Neural Network và lưu vào cache."""
+    class SimpleNN(nn.Module):
+        def __init__(self):
+            super(SimpleNN, self).__init__()
+            layers = [nn.Linear(784, hidden_size)]
+            activation_fn = {"ReLU": nn.ReLU(), "Sigmoid": nn.Sigmoid(), "Tanh": nn.Tanh()}[activation]
             layers.append(activation_fn)
-        layers.append(nn.Linear(hidden_size, 10))
-        self.network = nn.Sequential(*layers)
+            for _ in range(num_hidden_layers - 1):
+                layers.append(nn.Linear(hidden_size, hidden_size))
+                layers.append(activation_fn)
+            layers.append(nn.Linear(hidden_size, 10))
+            self.network = nn.Sequential(*layers)
 
-    def forward(self, x):
-        return self.network(x)
+        def forward(self, x):
+            return self.network(x)
+    return SimpleNN()
 
 # Tab 2: Huấn luyện
 with tab2:
@@ -158,7 +165,8 @@ with tab2:
                         test_acc_history, valid_acc_history = [], []
 
                         for iteration in range(max_iterations):
-                            model = SimpleNN(num_hidden_layers, hidden_neurons, activation_function)
+                            # Sử dụng mô hình từ cache
+                            model = create_model(num_hidden_layers, hidden_neurons, activation_function)
                             criterion = nn.CrossEntropyLoss()
                             optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -241,7 +249,7 @@ with tab2:
                         ax.legend()
                         st.pyplot(fig)
 
-                        # Hiển thị 5 mẫu thay vì 10 để tiết kiệm tài nguyên
+                        # Hiển thị 5 mẫu ví dụ
                         st.subheader("5 mẫu ví dụ từ tập Test")
                         random_indices = np.random.choice(len(X_test), 5, replace=False)
                         X_samples, y_true = X_test[random_indices], y_test[random_indices]
@@ -276,7 +284,10 @@ with tab1:
 
 # Tab 3: Dự đoán
 with tab3:
+    # Hàm tiền xử lý ảnh với @st.cache_data
+    @st.cache_data
     def preprocess_image(image, source="upload"):
+        """Tiền xử lý ảnh tải lên hoặc từ canvas."""
         if source == "upload":
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
